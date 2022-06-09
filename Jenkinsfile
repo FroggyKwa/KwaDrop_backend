@@ -1,0 +1,5 @@
+pipeline {
+    telegramSend "hello world"
+}
+
+
