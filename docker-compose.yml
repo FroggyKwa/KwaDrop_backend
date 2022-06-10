@@ -33,4 +33,5 @@ volumes:
 
 networks:
   default:
-    name: "${NAME}_backend_network"
+    external:
+      name: "${NAME}_backend_network"
