@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.8'
 services:
   backend:
     build:
@@ -13,3 +13,24 @@ services:
       PORT: "${PORT}"
       NAME: "${NAME}"
     restart: always
+    volumes:
+      - static:/usr/src/kwadrop_backend/static
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+  static:
+
+networks:
+  default:
+    name: "${NAME}_backend_network"

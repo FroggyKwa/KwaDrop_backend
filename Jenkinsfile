@@ -34,15 +34,13 @@ pipeline {
             }
             steps {
                 sh "pwd"
-                sh "cp \"${secret_file}\" \".env\""
-
                 echo "Deploying and Building..."
                 telegramSend 'Found new commit `${GIT_COMMIT_MSG}`'
                 telegramSend '#${NAME_DEV} Running tests...'
                 sh "./test.sh"
                 telegramSend '#${NAME_DEV} 🛠 Building New Container #${BUILD_NUMBER}'
                 sh "docker-compose build"
-                telegramSend '#${NAME_DEV} 🐳 Upping New Container #${BUILD_NUMBER}'"
+                telegramSend '#${NAME_DEV} 🐳 Upping New Container #${BUILD_NUMBER}'
                 sh "docker-compose up -d"
                 echo "Deployed!"
                 telegramSend 'START PROTOCOL KILL @froggy_kwa'

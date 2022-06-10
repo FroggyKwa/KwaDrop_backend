@@ -1,0 +1,14 @@
+FROM python:3.9.5
+
+ARG NAME
+
+RUN mkdir -p /usr/src/$NAME
+
+WORKDIR /usr/src/$NAME
+
+COPY ./requirements.txt /usr/src/$NAME
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install pytest
+COPY . /usr/src/$NAME
+
+CMD "pytest"
