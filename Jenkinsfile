@@ -17,6 +17,7 @@ pipeline {
                 withCredentials([file(credentialsId: "${NAME}_env", variable: "secret_file")]) {
                     sh "pwd"
                     sh "whoami"
+                    sh "rm -rf .env"
                     sh "cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
                     telegramSend "Found new commit `${GIT_COMMIT_MSG}`"
