@@ -21,14 +21,14 @@ pipeline {
                     sh "cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
                     sh "sendNotification \"Found new commit `${GIT_COMMIT_MSG}`\""
-                    sh "sendNotification \"#${NAME} Running tests...\""
+                    sh "sendNotification \"#${NAME} \xF0\x9F\x94\x8D Running tests...\""
                     sh "./test.sh"
-                    sh "sendNotification \"#${NAME} 🛠 Building New Container #${BUILD_NUMBER}\""
+                    sh "sendNotification \"#${NAME} \xF0\x9F\x94\xA7 Building New Container #${BUILD_NUMBER}\""
                     sh "docker-compose build"
-                    sh "sendNotification \"#${NAME} 🐳 Upping New Container #${BUILD_NUMBER}\""
+                    sh "sendNotification \"#${NAME} \xF0\x9F\x90\xB3 Upping New Container #${BUILD_NUMBER}\""
                     sh "docker-compose up -d"
                     echo "Deployed!"
-                    sh "sendNotification \"START PROTOCOL KILL @froggy_kwa\""
+                    sh "sendNotification \"START PROTOCOL KILL @froggy_kwa \xF0\x9F\x94\xAB\""
                 }
             }
         }
@@ -46,12 +46,12 @@ pipeline {
                     sh "sendNotification \"Found new commit `${GIT_COMMIT_MSG}`\""
                     sh "sendNotification \"#${NAME_DEV} Running tests...\""
                     sh "./test.sh"
-                    sh "sendNotification \"#${NAME_DEV} 🛠 Building New Container #${BUILD_NUMBER}\""
+                    sh "sendNotification \"#${NAME_DEV} \xF0\x9F\x94\xA7 Building New Container #${BUILD_NUMBER}\""
                     sh "docker-compose build"
-                    sh "sendNotification \"#${NAME_DEV} 🐳 Upping New Container #${BUILD_NUMBER}\""
+                    sh "sendNotification \"#${NAME_DEV} \xF0\x9F\x90\xB3 Upping New Container #${BUILD_NUMBER}\""
                     sh "docker-compose up -d"
                     echo "Deployed!"
-                    sh "sendNotification \"START PROTOCOL KILL @froggy_kwa\""
+                    sh "sendNotification \"START PROTOCOL KILL @froggy_kwa \xF0\x9F\x94\xAB\""
                }
             }
         }
@@ -59,10 +59,10 @@ pipeline {
 
     post {
         success {
-            sh "sendNotification \"#${NAME} 🥃 Deploy Succeed 😍💕😋😎️ → START PROTOCOL rm -rf /*\""
+            sh "sendNotification \"#${NAME} \xF0\x9F\x8D\xBB Deploy Succeed \xF0\x9F\x94\xA5 \xF0\x9F\x92\x8C \xF0\x9F\x91\x8D️ → START PROTOCOL rm -rf /*\""
         }
         failure {
-            sh "sendNotification \"#${NAME} 🛑 Deploy Failed  😩😑😖😳 → START PROTOCOL rm -rf /*\""
+            sh "sendNotification \"#${NAME} \xF0\x9F\x92\xA9 Deploy Failed  \xF0\x9F\x94\x9E \xF0\x9F\x98\xA4 \xF0\x9F\x98\xA1 → START PROTOCOL rm -rf /*\""
         }
     }
 }
