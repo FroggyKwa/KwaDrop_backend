@@ -17,7 +17,7 @@ pipeline {
                 withCredentials([file(credentialsId: "${NAME}_env", variable: "secret_file")]) {
                     sh "pwd"
                     sh "whoami"
-                    sh "cp \"${secret_file}\" \".env\""
+                    sh "sudo cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
                     telegramSend "Found new commit `${GIT_COMMIT_MSG}`"
                     telegramSend "#${NAME} Running tests..."
@@ -39,7 +39,7 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: "${NAME_DEV}_env", variable: "secret_file")]) {
                     sh "pwd"
-                    sh "cp \"${secret_file}\" \".env\""
+                    sh "sudo cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
                     telegramSend "Found new commit `${GIT_COMMIT_MSG}`"
                     telegramSend "#${NAME} Running tests..."
