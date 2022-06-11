@@ -39,6 +39,7 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: "${NAME_DEV}_env", variable: "secret_file")]) {
                     sh "pwd"
+                    sh "rm -rf .env"
                     sh "cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
                     telegramSend "Found new commit `${GIT_COMMIT_MSG}`"
