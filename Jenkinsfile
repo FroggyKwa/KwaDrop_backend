@@ -21,7 +21,7 @@ pipeline {
                     sh "cp \"${secret_file}\" \".env\""
                     echo "${GIT_COMMIT_MSG}"
                     echo "Deploying and Building..."
-                    sh "sendNotification \"Found new commit `${GIT_COMMIT_MSG}`\""
+                    sh "sendNotification \"Found new commit \`${GIT_COMMIT_MSG}\`\""
                     sh "sendNotification \"#${NAME} Running tests...\""
                     sh "./test.sh"
                     sh "sendNotification \"#${NAME} Building New Container #${BUILD_NUMBER}\""
