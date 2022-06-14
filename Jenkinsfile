@@ -33,7 +33,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage("Deploy Dev") {
             when {
                 branch "dev"
@@ -44,7 +44,7 @@ pipeline {
                     sh "rm -rf .env"
                     sh "cp \"${secret_file}\" \".env\""
                     echo "Deploying and Building..."
-                    sh "sendNotification \"Found new commit `${GIT_COMMIT_MSG}`\""
+                    sh "sendNotification \"Found new commit **${GIT_COMMIT_MSG}**\""
                     sh "sendNotification \"#${NAME_DEV} Running tests...\""
                     sh "./test.sh"
                     sh "sendNotification \"#${NAME_DEV} Building New Container #${BUILD_NUMBER}\""
