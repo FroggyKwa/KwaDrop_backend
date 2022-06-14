@@ -29,7 +29,6 @@ class User(Base):
     associations = relationship("Association", back_populates="user")
 
 
-
 class Room(Base):
     __tablename__ = "rooms"
 
