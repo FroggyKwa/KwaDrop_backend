@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database.db import engine
+from models import models, schemas
+from routes import routes
+
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 
-origins = [
-    "*",
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,6 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["set-cookie"],
 )
+
+app.include_router(routes.router)
 
 
 @app.get("/")
