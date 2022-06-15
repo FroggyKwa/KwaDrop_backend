@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from authentication.routes import router as auth_router
 from database.db import engine
-from models import models, schemas
-from routes import routes
+from models import models
+from routes.routes import router as main_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -20,7 +21,8 @@ app.add_middleware(
     expose_headers=["set-cookie"],
 )
 
-app.include_router(routes.router)
+app.include_router(main_router)
+app.include_router(auth_router)
 
 
 @app.get("/")
