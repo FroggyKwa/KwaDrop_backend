@@ -1,8 +1,8 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from starlette.requests import Request
 
 from FastApi_sessions.fastapi_session import SessionData, backend, cookie, verifier
 from database.db import get_db
@@ -18,9 +18,10 @@ async def create_user(name: str, session_data: SessionData = Depends(verifier), 
     try:
         session_id = session_data.dict()["session_id"]
         session_data.username = name
-        print('hi!')
         user = db_create_user(name, session_id, db)
         db.commit()
+    except IntegrityError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User for this session already exists.")
     except HTTPException as e:
         raise e
     except Exception as e:

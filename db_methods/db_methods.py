@@ -14,12 +14,9 @@ def create_user(name: str, session_id: str, db: Session):
         db.add(user)
         # db.commit()
     except IntegrityError as e:
-        print(str(e))
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User for this session already exists.")
     except Exception as e:
-        print(str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    print('все ок')
     return user
 
 
