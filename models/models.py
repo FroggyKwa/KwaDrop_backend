@@ -24,7 +24,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    session_id = Column(String, nullable=False)
+    session_id = Column(String, nullable=False, unique=True)
 
     associations = relationship("Association", back_populates="user")
 
