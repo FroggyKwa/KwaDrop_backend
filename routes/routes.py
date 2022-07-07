@@ -70,6 +70,11 @@ async def create_room(
 ):
     try:
         user = get_user_by_session(session_data.session_id, db)
+        try:
+            a = db.query(models.Association).filter(models.Association.user == user).one()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has association to existing room.")
+        except NoResultFound:
+            pass
         room = db_create_room(name, password, user, db)
     except HTTPException as e:
         raise e
@@ -77,6 +82,33 @@ async def create_room(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return room
 
+
+@router.patch("/edit_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
+async def edit_room(
+        name: Optional[str] = None, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a: models.Association = db.query(models.Association).filter(models.Association.user == user).one()
+        print(a.usertype, a, type(a))
+        if a.usertype not in (models.UserType.host, models.UserType.moder):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This user has no permission to edit this room.')
+        print(models.Room.associations, type(models.Room.associations))
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        print('hui')
+        if name is not None:
+            setattr(room, 'name', name)
+        if password is not None:
+            setattr(room, 'password', password)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(e.__repr__())
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return room
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
 async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):

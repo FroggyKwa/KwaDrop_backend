@@ -36,6 +36,7 @@ class Room(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     password = Column(String)
+
     associations = relationship("Association", back_populates="room")
 
 
