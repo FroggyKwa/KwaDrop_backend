@@ -21,7 +21,7 @@ cookie_params = CookieParameters()
 cookie = SessionCookie(
     cookie_name="cookie",
     identifier="general_verifier",
-    auto_error=True,
+    auto_error=False,
     secret_key="DONOTUSE",
     cookie_params=cookie_params,
 )
@@ -43,6 +43,7 @@ class BasicVerifier(SessionVerifier[UUID, SessionData]):
         self._auth_http_exception = auth_http_exception
 
     async def my_call(self, request: Request):
+        print('hui')
         self._auto_error = False
         data = await self.__call__(request)
         self._auto_error = True

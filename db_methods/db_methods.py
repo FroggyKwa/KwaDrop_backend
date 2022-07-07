@@ -20,8 +20,23 @@ def create_user(name: str, session_id: str, db: Session):
     return user
 
 
+def create_room(name: str, password: str, user: models.User, db: Session):
+    try:
+        room = models.Room(name=name, password=password)
+        db.add(room)
+        db.flush()
+        a = models.Association(user=user, room=room, usertype=models.UserType.host)
+        db.add(a)
+        db.commit()
+    except IntegrityError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Room for this session already exists.")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return room
+
+
 def get_user_by_session(session_id: str, db: Session):
-    user: list[models.User] = db.query(models.User).get(session_id)
+    user: list[models.User] = db.query(models.User).filter(models.User.session_id == session_id).one()
     try:
         assert user, "There is no user for this session"
     except AssertionError as e:
