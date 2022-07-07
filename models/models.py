@@ -2,6 +2,7 @@ import enum
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
+import sqlalchemy.orm.collections
 
 from database.db import Base
 

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
 from FastApi_sessions.fastapi_session import SessionData, backend, cookie, verifier
@@ -11,7 +11,6 @@ from models import models, schemas
 from uuid import UUID, uuid4
 
 router = APIRouter()
-
 
 
 @router.post("/create_user", dependencies=[Depends(cookie)], response_model=schemas.User)
@@ -30,14 +29,47 @@ async def create_user(name: str, session_data: SessionData = Depends(verifier), 
     return user
 
 
-@router.post("/create_room", dependencies=[Depends(cookie)])
+@router.patch("/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User)
+async def rename_user(name: str, session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)):
+    try:
+        user = get_user_by_session(session_data.session_id, db)
+        setattr(user, 'name', name)
+        db.commit()
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return user
+
+
+@router.delete("/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User)
+async def delete_user(session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)):
+    try: #todo: если юзер хост - удалаять комнату
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        try:
+            a = db.query(models.Association).filter(models.Association.user==user).one()
+            print(a)
+            db.delete(a)
+            #db.flush()
+        except NoResultFound:
+            pass
+        db.delete(user)
+        db.commit()
+    except HTTPException as e:
+        print(e.__repr__())
+        raise e
+    except Exception as e:
+        print(e.__repr__())
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return user
+
+
+@router.post("/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
 async def create_room(
-    name: str, password: Optional[str], session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+    name: str, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
     try:
-        print(session_data.session_id, type(session_data.session_id))
         user = get_user_by_session(session_data.session_id, db)
-        print('hui')
         room = db_create_room(name, password, user, db)
     except HTTPException as e:
         raise e

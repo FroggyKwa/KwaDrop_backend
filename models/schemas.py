@@ -12,3 +12,11 @@ class User(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class Room(BaseModel):
+    name: str
+    id: int
+
+    class Config:
+        orm_mode = True

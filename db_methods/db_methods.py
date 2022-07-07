@@ -2,7 +2,7 @@ from models import models
 
 from database.db import get_db
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
 from fastapi import HTTPException, Depends, status
@@ -36,9 +36,14 @@ def create_room(name: str, password: str, user: models.User, db: Session):
 
 
 def get_user_by_session(session_id: str, db: Session):
-    user: list[models.User] = db.query(models.User).filter(models.User.session_id == session_id).one()
     try:
+        user: list[models.User] = db.query(models.User).filter(models.User.session_id == session_id).one()
         assert user, "There is no user for this session"
     except AssertionError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="There is no user for this session")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     return user
