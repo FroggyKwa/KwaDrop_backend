@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from fastapi_sessions.backends.implementations import InMemoryBackend
 from fastapi_sessions.session_verifier import SessionVerifier
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
+from starlette.requests import Request
 
 
 class SessionData(BaseModel):
@@ -40,6 +41,12 @@ class BasicVerifier(SessionVerifier[UUID, SessionData]):
         self._auto_error = auto_error
         self._backend = backend
         self._auth_http_exception = auth_http_exception
+
+    async def my_call(self, request: Request):
+        self._auto_error = False
+        data = await self.__call__(request)
+        self._auto_error = True
+        return data
 
     @property
     def identifier(self):

@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 router = APIRouter()
 
 
+
 @router.post("/create_user", dependencies=[Depends(cookie)], response_model=schemas.User)
 async def create_user(name: str, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
     try:
@@ -41,20 +42,27 @@ async def create_room(
     return room
 
 
-@router.post("/create_session")
-async def create_session(response: Response):
+@router.post("/create_session", dependencies=[Depends(cookie)])
+async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):
+    try:
+        if session_data is not None:
+            print(session_data)
+            return f"session already exists"
+        session = uuid4()
+        data = SessionData(session_id=str(session))
 
-    session = uuid4()
-    data = SessionData(session_id=str(session))
+        await backend.create(session, data)
+        cookie.attach_to_response(response, session)
 
-    await backend.create(session, data)
-    cookie.attach_to_response(response, session)
-
-    return f"created session"
+        return f"created session"
+    except Exception as e:
+        print(e, str(e), e.__repr__(), sep='\n')
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/whoami", dependencies=[Depends(cookie)])
 async def whoami(session_data: SessionData = Depends(verifier)):
+    print(session_data)
     print(backend.data)
     print(cookie.cookie_params.dict())
     return session_data
