@@ -54,7 +54,7 @@ class Association(Base):
 class Song(Base):
     __tablename__ = "songs"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     link = Column(String, nullable=False)
     status = Column(Enum(SongState), default=SongState.in_queue)
     user_id = Column(ForeignKey("users.id"), primary_key=True)

@@ -33,3 +33,4 @@ websockets==10.3
 sqlalchemy==1.4.37
 psycopg2-binary==2.9.3
 fastapi-sessions=0.3.2
+pytube=12.1.0

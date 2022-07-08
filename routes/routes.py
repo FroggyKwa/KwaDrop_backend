@@ -9,6 +9,7 @@ from database.db import get_db
 from db_methods.db_methods import create_user as db_create_user, get_user_by_session, create_room as db_create_room
 from models import models, schemas
 from uuid import UUID, uuid4
+from pytube import YouTube
 
 router = APIRouter()
 
@@ -166,6 +167,31 @@ async def connect(session_data: SessionData = Depends(verifier), db: Session = D
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return schemas.Success()
+
+
+@router.post("/add_song", dependencies=[Depends(cookie)], response_model=schemas.Song)
+async def add_song(link: str, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+
+        yt = YouTube(link)
+
+        yt.streams.filter(only_audio=True)[0].url
+
+        song = models.Song(user=user, link=yt.streams.filter(only_audio=True)[0].url, room=room, status=models.SongState.in_queue)
+        db.add(song)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+    except HTTPException as e:
+        print(e.__repr__())
+        raise e
+    except Exception as e:
+        print(e.__repr__())
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return song
 
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
