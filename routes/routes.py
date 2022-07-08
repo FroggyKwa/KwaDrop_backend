@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/create_user", dependencies=[Depends(cookie)], response_model=schemas.User
+    "/create_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
 )
 async def create_user(
     name: str,
@@ -44,7 +44,7 @@ async def create_user(
 
 
 @router.patch(
-    "/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User
+    "/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
 )
 async def rename_user(
     name: str,
@@ -63,7 +63,7 @@ async def rename_user(
 
 
 @router.delete(
-    "/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User
+    "/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
 )
 async def delete_user(
     session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
@@ -89,7 +89,7 @@ async def delete_user(
 
 
 @router.post(
-    "/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room
+    "/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"]
 )
 async def create_room(
     name: str,
@@ -119,7 +119,31 @@ async def create_room(
     return room
 
 
-@router.patch("/edit_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
+@router.get("/get_roommates", dependencies=[Depends(cookie)], response_model=schemas.UserList, tags=["Room"])
+async def get_roommates(session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
+):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a: models.Association = db.query(models.Association).filter(
+            models.Association.user == user
+        ).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        a_list = (
+            db.query(models.Association).filter(models.Association.room == room).all()
+        )
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return schemas.UserList(users=a_list)
+
+
+@router.patch("/edit_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"])
 async def edit_room(
     name: Optional[str] = None,
     password: Optional[str] = None,
@@ -155,7 +179,7 @@ async def edit_room(
 
 
 @router.delete(
-    "/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room
+    "/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"]
 )
 async def delete_room(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
@@ -191,7 +215,7 @@ async def delete_room(
     return room
 
 
-@router.post("/connect", dependencies=[Depends(cookie)])
+@router.post("/connect", dependencies=[Depends(cookie)], tags=["Room"])
 async def connect(
     room_id: int,
     password: Optional[str] = None,
@@ -234,7 +258,7 @@ async def connect(
     return room
 
 
-@router.delete("/disconnect", dependencies=[Depends(cookie)])
+@router.delete("/disconnect", dependencies=[Depends(cookie)], tags=["Room"])
 async def connect(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
@@ -255,7 +279,7 @@ async def connect(
     return schemas.Success()
 
 
-@router.post("/add_song", dependencies=[Depends(cookie)], response_model=schemas.Song)
+@router.post("/add_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"])
 async def add_song(
     link: str,
     session_data: SessionData = Depends(verifier),
@@ -267,8 +291,6 @@ async def add_song(
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
 
         yt = YouTube(link)
-
-        yt.streams.filter(only_audio=True)[0].url
 
         song = models.Song(
             user=user,
@@ -290,7 +312,7 @@ async def add_song(
     return song
 
 
-@router.post("/playnext", dependencies=[Depends(cookie)], response_model=schemas.Song)
+@router.post("/playnext", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"])
 async def playnext(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
@@ -343,7 +365,7 @@ async def playnext(
 
 
 @router.delete(
-    "/delete_song", dependencies=[Depends(cookie)], response_model=schemas.Song
+    "/delete_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"]
 )
 async def delete_song(
     song_id: int,
@@ -389,7 +411,7 @@ async def delete_song(
 
 
 @router.get(
-    "/get_current_song", dependencies=[Depends(cookie)], response_model=schemas.Song
+    "/get_current_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"]
 )
 async def get_current_song(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
@@ -418,7 +440,7 @@ async def get_current_song(
 
 
 @router.post(
-    "/get_playlist", dependencies=[Depends(cookie)], response_model=schemas.Playlist
+    "/get_playlist", dependencies=[Depends(cookie)], response_model=schemas.Playlist, tags=["Songs"]
 )
 async def get_playlist(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
@@ -458,7 +480,7 @@ async def get_playlist(
     return schemas.Playlist(songs=playlist)
 
 
-@router.post("/create_session", dependencies=[Depends(cookie)])
+@router.post("/create_session", dependencies=[Depends(cookie)], tags=["Session"])
 async def create_session(
     response: Response, session_data: SessionData = Depends(verifier.my_call)
 ):
@@ -476,12 +498,12 @@ async def create_session(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/whoami", dependencies=[Depends(cookie)])
+@router.get("/whoami", dependencies=[Depends(cookie)], tags=["Session"])
 async def whoami(session_data: SessionData = Depends(verifier)):
     return session_data
 
 
-@router.delete("/delete_session")
+@router.delete("/delete_session", tags=["Session"])
 async def del_session(response: Response, session_id: UUID = Depends(cookie)):
     await backend.delete(session_id)
     cookie.delete_from_response(response)

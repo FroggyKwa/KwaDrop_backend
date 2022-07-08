@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional
 
 import models.models
 
@@ -9,6 +8,7 @@ class Success(BaseModel):
 
 
 class User(BaseModel):
+    id: int
     name: str
     session_id: str
 
@@ -39,3 +39,21 @@ class Playlist(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UserList(BaseModel):
+    users: list['RoomAssociation']
+
+    class Config:
+        orm_mode = True
+
+
+class RoomAssociation(BaseModel):
+    user: User
+    usertype: models.models.UserType
+
+    class Config:
+        orm_mode = True
+
+
+UserList.update_forward_refs()
