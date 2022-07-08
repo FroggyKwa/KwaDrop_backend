@@ -19,7 +19,10 @@ router = APIRouter()
 
 
 @router.post(
-    "/create_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
+    "/create_user",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.User,
+    tags=["User"],
 )
 async def create_user(
     name: str,
@@ -44,7 +47,10 @@ async def create_user(
 
 
 @router.patch(
-    "/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
+    "/rename_user",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.User,
+    tags=["User"],
 )
 async def rename_user(
     name: str,
@@ -63,7 +69,10 @@ async def rename_user(
 
 
 @router.delete(
-    "/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User, tags=["User"]
+    "/delete_user",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.User,
+    tags=["User"],
 )
 async def delete_user(
     session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
@@ -89,7 +98,10 @@ async def delete_user(
 
 
 @router.post(
-    "/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"]
+    "/create_room",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Room,
+    tags=["Room"],
 )
 async def create_room(
     name: str,
@@ -119,8 +131,14 @@ async def create_room(
     return room
 
 
-@router.get("/get_roommates", dependencies=[Depends(cookie)], response_model=schemas.UserList, tags=["Room"])
-async def get_roommates(session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
+@router.get(
+    "/get_roommates",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.UserList,
+    tags=["Room"],
+)
+async def get_roommates(
+    session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
 ):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
@@ -143,7 +161,12 @@ async def get_roommates(session_data: SessionData = Depends((verifier)), db: Ses
     return schemas.UserList(users=a_list)
 
 
-@router.patch("/edit_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"])
+@router.patch(
+    "/edit_room",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Room,
+    tags=["Room"],
+)
 async def edit_room(
     name: Optional[str] = None,
     password: Optional[str] = None,
@@ -179,7 +202,10 @@ async def edit_room(
 
 
 @router.delete(
-    "/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room, tags=["Room"]
+    "/delete_room",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Room,
+    tags=["Room"],
 )
 async def delete_room(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
@@ -279,7 +305,12 @@ async def connect(
     return schemas.Success()
 
 
-@router.post("/add_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"])
+@router.post(
+    "/add_song",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
+)
 async def add_song(
     link: str,
     session_data: SessionData = Depends(verifier),
@@ -312,7 +343,12 @@ async def add_song(
     return song
 
 
-@router.post("/playnext", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"])
+@router.post(
+    "/playnext",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
+)
 async def playnext(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
@@ -365,7 +401,10 @@ async def playnext(
 
 
 @router.delete(
-    "/delete_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"]
+    "/delete_song",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
 )
 async def delete_song(
     song_id: int,
@@ -411,7 +450,10 @@ async def delete_song(
 
 
 @router.get(
-    "/get_current_song", dependencies=[Depends(cookie)], response_model=schemas.Song, tags=["Songs"]
+    "/get_current_song",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
 )
 async def get_current_song(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
@@ -440,7 +482,10 @@ async def get_current_song(
 
 
 @router.post(
-    "/get_playlist", dependencies=[Depends(cookie)], response_model=schemas.Playlist, tags=["Songs"]
+    "/get_playlist",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Playlist,
+    tags=["Songs"],
 )
 async def get_playlist(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)

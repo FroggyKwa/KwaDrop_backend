@@ -42,7 +42,7 @@ class Playlist(BaseModel):
 
 
 class UserList(BaseModel):
-    users: list['RoomAssociation']
+    users: list["RoomAssociation"]
 
     class Config:
         orm_mode = True
