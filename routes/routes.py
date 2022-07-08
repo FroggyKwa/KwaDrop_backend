@@ -127,6 +127,31 @@ async def delete_room(session_data: SessionData = Depends(verifier), db: Session
     return room
 
 
+@router.post("/connect", dependencies=[Depends(cookie)])
+async def connect(room_id: int, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        try:
+            a = db.query(models.Association).filter(models.Association.user == user).one()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has association to existing room.")
+        except NoResultFound:
+            pass
+        room = db.query(models.Room).filter(models.Room.id == room_id).one()
+        if room.password is not None:
+            if password != room.password:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password is incorrect")
+        a = models.Association(user=user, room=room, usertype=models.UserType.basic)
+        db.add(a)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return room
+
+
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
 async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):
