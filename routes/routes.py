@@ -48,18 +48,14 @@ async def delete_user(session_data: SessionData = Depends((verifier)), db: Sessi
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
             a = db.query(models.Association).filter(models.Association.user==user).one()
-            print(a)
             db.delete(a)
-            #db.flush()
         except NoResultFound:
             pass
         db.delete(user)
         db.commit()
     except HTTPException as e:
-        print(e.__repr__())
         raise e
     except Exception as e:
-        print(e.__repr__())
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return user
 
@@ -90,12 +86,9 @@ async def edit_room(
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a: models.Association = db.query(models.Association).filter(models.Association.user == user).one()
-        print(a.usertype, a, type(a))
         if a.usertype not in (models.UserType.host, models.UserType.moder):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This user has no permission to edit this room.')
-        print(models.Room.associations, type(models.Room.associations))
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        print('hui')
         if name is not None:
             setattr(room, 'name', name)
         if password is not None:
@@ -106,15 +99,39 @@ async def edit_room(
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(e.__repr__())
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return room
+
+
+@router.delete("/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
+async def delete_room(session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a: models.Association = db.query(models.Association).filter(models.Association.user == user).one()
+        if a.usertype not in (models.UserType.host, models.UserType.moder):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail='This user has no permission to edit this room.')
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        a_list = db.query(models.Association).filter(models.Association.room == room).all()
+        for i in a_list:
+            db.delete(i)
+        db.flush()
+        db.delete(room)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return room
+
+
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
 async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):
     try:
         if session_data is not None:
-            print(session_data)
             return f"session already exists"
         session = uuid4()
         data = SessionData(session_id=str(session))
@@ -124,15 +141,11 @@ async def create_session(response: Response, session_data: SessionData = Depends
 
         return f"created session"
     except Exception as e:
-        print(e, str(e), e.__repr__(), sep='\n')
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/whoami", dependencies=[Depends(cookie)])
 async def whoami(session_data: SessionData = Depends(verifier)):
-    print(session_data)
-    print(backend.data)
-    print(cookie.cookie_params.dict())
     return session_data
 
 
