@@ -458,6 +458,52 @@ async def playprev(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.patch(
+    "/playthis",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
+)
+async def playthis(
+    song_id: int,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        try:
+            song = (
+                db.query(models.Song)
+                .filter(models.Song.id == song_id, models.Song.room == room)
+                .one()
+            )
+        except NoResultFound:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"There is no song in this room with id {song_id}.",
+            )
+        songs = db.query(models.Song).filter(models.Song.room == room).all()
+        for i in songs:
+            if i.id < song_id:
+                setattr(i, "status", models.SongState.played)
+            elif i.id > song_id:
+                setattr(i, "status", models.SongState.in_queue)
+            else:
+                setattr(i, "status", models.SongState.is_playing)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
 @router.delete(
     "/delete_song",
     dependencies=[Depends(cookie)],
