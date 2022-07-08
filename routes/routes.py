@@ -285,7 +285,7 @@ async def connect(
 
 
 @router.delete("/disconnect", dependencies=[Depends(cookie)], tags=["Room"])
-async def connect(
+async def disconnect(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
     try:
@@ -343,7 +343,7 @@ async def add_song(
     return song
 
 
-@router.post(
+@router.patch(
     "/playnext",
     dependencies=[Depends(cookie)],
     response_model=schemas.Song,
@@ -398,6 +398,64 @@ async def playnext(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return queue[0]
+
+
+@router.patch(
+    "/playprev",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Song,
+    tags=["Songs"],
+)
+async def playprev(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        queue = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.in_queue,
+            )
+            .all()
+        )
+        current: list = db.query(models.Song).filter(
+            models.Song.room == room, models.Song.status == models.SongState.is_playing
+        ).all()
+        played = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room, models.Song.status == models.SongState.played
+            )
+            .all()
+        )
+        if not current and not queue and not played:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
+            )
+        if not queue and not played:
+            return current[0]
+        if current:
+            setattr(current[0], "status", models.SongState.in_queue)
+        if not played:
+            setattr(queue[-1], "status", models.SongState.is_playing)
+            db.commit()
+            return queue[-1]
+        else:
+            setattr(played[-1], "status", models.SongState.is_playing)
+            db.commit()
+            return played[-1]
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete(
