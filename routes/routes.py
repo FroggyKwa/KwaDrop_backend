@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from FastApi_sessions.fastapi_session import SessionData, backend, cookie, verifier
 from database.db import get_db
-from db_methods.db_methods import create_user as db_create_user, get_user_by_session, create_room as db_create_room
+from db_methods.db_methods import (
+    create_user as db_create_user,
+    get_user_by_session,
+    create_room as db_create_room,
+)
 from models import models, schemas
 from uuid import UUID, uuid4
 from pytube import YouTube
@@ -14,15 +18,24 @@ from pytube import YouTube
 router = APIRouter()
 
 
-@router.post("/create_user", dependencies=[Depends(cookie)], response_model=schemas.User)
-async def create_user(name: str, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+@router.post(
+    "/create_user", dependencies=[Depends(cookie)], response_model=schemas.User
+)
+async def create_user(
+    name: str,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
     try:
         session_id = session_data.dict()["session_id"]
         session_data.username = name
         user = db_create_user(name, session_id, db)
         db.commit()
     except IntegrityError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User for this session already exists.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User for this session already exists.",
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -30,11 +43,17 @@ async def create_user(name: str, session_data: SessionData = Depends(verifier), 
     return user
 
 
-@router.patch("/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User)
-async def rename_user(name: str, session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)):
+@router.patch(
+    "/rename_user", dependencies=[Depends(cookie)], response_model=schemas.User
+)
+async def rename_user(
+    name: str,
+    session_data: SessionData = Depends((verifier)),
+    db: Session = Depends(get_db),
+):
     try:
         user = get_user_by_session(session_data.session_id, db)
-        setattr(user, 'name', name)
+        setattr(user, "name", name)
         db.commit()
     except HTTPException as e:
         raise e
@@ -43,12 +62,20 @@ async def rename_user(name: str, session_data: SessionData = Depends((verifier))
     return user
 
 
-@router.delete("/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User)
-async def delete_user(session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)):
-    try: #todo: если юзер хост - удалаять комнату
+@router.delete(
+    "/delete_user", dependencies=[Depends(cookie)], response_model=schemas.User
+)
+async def delete_user(
+    session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
+):
+    try:  # todo: если юзер хост - удалаять комнату
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
-            a = db.query(models.Association).filter(models.Association.user==user).one()
+            a = (
+                db.query(models.Association)
+                .filter(models.Association.user == user)
+                .one()
+            )
             db.delete(a)
         except NoResultFound:
             pass
@@ -61,15 +88,27 @@ async def delete_user(session_data: SessionData = Depends((verifier)), db: Sessi
     return user
 
 
-@router.post("/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
+@router.post(
+    "/create_room", dependencies=[Depends(cookie)], response_model=schemas.Room
+)
 async def create_room(
-    name: str, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+    name: str,
+    password: Optional[str] = None,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
 ):
     try:
         user = get_user_by_session(session_data.session_id, db)
         try:
-            a = db.query(models.Association).filter(models.Association.user == user).one()
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has association to existing room.")
+            a = (
+                db.query(models.Association)
+                .filter(models.Association.user == user)
+                .one()
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already has association to existing room.",
+            )
         except NoResultFound:
             pass
         room = db_create_room(name, password, user, db)
@@ -82,21 +121,32 @@ async def create_room(
 
 @router.patch("/edit_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
 async def edit_room(
-        name: Optional[str] = None, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+    name: Optional[str] = None,
+    password: Optional[str] = None,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
 ):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
-        a: models.Association = db.query(models.Association).filter(models.Association.user == user).one()
+        a: models.Association = db.query(models.Association).filter(
+            models.Association.user == user
+        ).one()
         if a.usertype not in (models.UserType.host, models.UserType.moder):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This user has no permission to edit this room.')
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This user has no permission to edit this room.",
+            )
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
         if name is not None:
-            setattr(room, 'name', name)
+            setattr(room, "name", name)
         if password is not None:
-            setattr(room, 'password', password)
+            setattr(room, "password", password)
         db.commit()
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -104,23 +154,36 @@ async def edit_room(
     return room
 
 
-@router.delete("/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room)
-async def delete_room(session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+@router.delete(
+    "/delete_room", dependencies=[Depends(cookie)], response_model=schemas.Room
+)
+async def delete_room(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
-        a: models.Association = db.query(models.Association).filter(models.Association.user == user).one()
+        a: models.Association = db.query(models.Association).filter(
+            models.Association.user == user
+        ).one()
         if a.usertype not in (models.UserType.host, models.UserType.moder):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail='This user has no permission to edit this room.')
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This user has no permission to edit this room.",
+            )
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        a_list = db.query(models.Association).filter(models.Association.room == room).all()
+        a_list = (
+            db.query(models.Association).filter(models.Association.room == room).all()
+        )
         for i in a_list:
             db.delete(i)
         db.flush()
         db.delete(room)
         db.commit()
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -129,23 +192,41 @@ async def delete_room(session_data: SessionData = Depends(verifier), db: Session
 
 
 @router.post("/connect", dependencies=[Depends(cookie)])
-async def connect(room_id: int, password: Optional[str] = None, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+async def connect(
+    room_id: int,
+    password: Optional[str] = None,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
-            a = db.query(models.Association).filter(models.Association.user == user).one()
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already has association to existing room.")
+            a = (
+                db.query(models.Association)
+                .filter(models.Association.user == user)
+                .one()
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already has association to existing room.",
+            )
         except NoResultFound:
             pass
         room = db.query(models.Room).filter(models.Room.id == room_id).one()
         if room.password is not None:
             if password != room.password:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password is incorrect")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Password is incorrect",
+                )
         a = models.Association(user=user, room=room, usertype=models.UserType.basic)
         db.add(a)
         db.commit()
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -154,14 +235,19 @@ async def connect(room_id: int, password: Optional[str] = None, session_data: Se
 
 
 @router.delete("/disconnect", dependencies=[Depends(cookie)])
-async def connect(session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+async def connect(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         db.delete(a)
         db.commit()
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -170,7 +256,11 @@ async def connect(session_data: SessionData = Depends(verifier), db: Session = D
 
 
 @router.post("/add_song", dependencies=[Depends(cookie)], response_model=schemas.Song)
-async def add_song(link: str, session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+async def add_song(
+    link: str,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -180,11 +270,19 @@ async def add_song(link: str, session_data: SessionData = Depends(verifier), db:
 
         yt.streams.filter(only_audio=True)[0].url
 
-        song = models.Song(user=user, link=yt.streams.filter(only_audio=True)[0].url, room=room, status=models.SongState.in_queue)
+        song = models.Song(
+            user=user,
+            link=yt.streams.filter(only_audio=True)[0].url,
+            room=room,
+            status=models.SongState.in_queue,
+        )
         db.add(song)
         db.commit()
     except NoResultFound:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
     except HTTPException as e:
         print(e.__repr__())
         raise e
@@ -195,7 +293,9 @@ async def add_song(link: str, session_data: SessionData = Depends(verifier), db:
 
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
-async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):
+async def create_session(
+    response: Response, session_data: SessionData = Depends(verifier.my_call)
+):
     try:
         if session_data is not None:
             return f"session already exists"

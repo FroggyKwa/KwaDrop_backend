@@ -43,7 +43,7 @@ class BasicVerifier(SessionVerifier[UUID, SessionData]):
         self._auth_http_exception = auth_http_exception
 
     async def my_call(self, request: Request):
-        print('hui')
+        print("hui")
         self._auto_error = False
         data = await self.__call__(request)
         self._auto_error = True
@@ -77,6 +77,4 @@ verifier = BasicVerifier(
     auth_http_exception=HTTPException(status_code=403, detail="invalid session"),
 )
 
-#app = FastAPI()
-
-
+# app = FastAPI()
