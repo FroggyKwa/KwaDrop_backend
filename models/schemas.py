@@ -32,3 +32,10 @@ class Song(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class Playlist(BaseModel):
+    songs: list[Song]
+
+    class Config:
+        orm_mode = True
