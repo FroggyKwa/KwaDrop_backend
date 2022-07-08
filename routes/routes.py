@@ -18,7 +18,6 @@ from pytube import YouTube
 router = APIRouter()
 
 
-
 @router.post(
     "/create_user", dependencies=[Depends(cookie)], response_model=schemas.User
 )
@@ -292,26 +291,44 @@ async def add_song(
 
 
 @router.post("/playnext", dependencies=[Depends(cookie)], response_model=schemas.Song)
-async def playnext(session_data: SessionData = Depends(verifier),
-    db: Session = Depends(get_db)):
+async def playnext(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        queue = db.query(models.Song).filter(models.Song.room == room, models.Song.status == models.SongState.in_queue).all()
-        current: list = db.query(models.Song).filter(models.Song.room == room, models.Song.status == models.SongState.is_playing).all()
-        played = db.query(models.Song).filter(models.Song.room == room, models.Song.status == models.SongState.played).all()
+        queue = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.in_queue,
+            )
+            .all()
+        )
+        current: list = db.query(models.Song).filter(
+            models.Song.room == room, models.Song.status == models.SongState.is_playing
+        ).all()
+        played = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room, models.Song.status == models.SongState.played
+            )
+            .all()
+        )
         if not current and not queue and not played:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
+            )
         if not queue and not played:
             return current[0]
         if not queue:
             for i in played:
-                setattr(i, 'status', models.SongState.in_queue)
+                setattr(i, "status", models.SongState.in_queue)
             queue = played
         if current:
-            setattr(current[0], 'status', models.SongState.played)
-        setattr(queue[0], 'status', models.SongState.is_playing)
+            setattr(current[0], "status", models.SongState.played)
+        setattr(queue[0], "status", models.SongState.is_playing)
         db.commit()
     except NoResultFound:
         raise HTTPException(
@@ -325,16 +342,69 @@ async def playnext(session_data: SessionData = Depends(verifier),
     return queue[0]
 
 
-@router.get("/get_current_song", dependencies=[Depends(cookie)], response_model=schemas.Song)
-async def get_current_song(session_data: SessionData = Depends(verifier),
-    db: Session = Depends(get_db)):
+@router.delete(
+    "/delete_song", dependencies=[Depends(cookie)], response_model=schemas.Song
+)
+async def delete_song(
+    song_id: int,
+    session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        current: list = db.query(models.Song).filter(models.Song.room == room, models.Song.status == models.SongState.is_playing).all()
+        if a.usertype not in (
+            models.UserType.host,
+            models.UserType.moder,
+            models.UserType.basic,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This user has no permission to perform this action.",
+            )
+        try:
+            song = (
+                db.query(models.Song)
+                .filter(models.Song.id == song_id, models.Song.room == room)
+                .one()
+            )
+            db.delete(song)
+            db.commit()
+        except NoResultFound:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"There is no song in this room with id {song_id}.",
+            )
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return song
+
+
+@router.get(
+    "/get_current_song", dependencies=[Depends(cookie)], response_model=schemas.Song
+)
+async def get_current_song(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        current: list = db.query(models.Song).filter(
+            models.Song.room == room, models.Song.status == models.SongState.is_playing
+        ).all()
         if not current:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nothing is playing.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Nothing is playing."
+            )
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -347,19 +417,34 @@ async def get_current_song(session_data: SessionData = Depends(verifier),
     return current[0]
 
 
-@router.post("/get_playlist", dependencies=[Depends(cookie)], response_model=schemas.Playlist)
-async def get_playlist(session_data: SessionData = Depends(verifier),
-    db: Session = Depends(get_db)):
+@router.post(
+    "/get_playlist", dependencies=[Depends(cookie)], response_model=schemas.Playlist
+)
+async def get_playlist(
+    session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
+):
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        queue = db.query(models.Song).filter(models.Song.room == room,
-                                             models.Song.status == models.SongState.in_queue).all()
-        current: list = db.query(models.Song).filter(models.Song.room == room,
-                                                     models.Song.status == models.SongState.is_playing).all()
-        played = db.query(models.Song).filter(models.Song.room == room,
-                                              models.Song.status == models.SongState.played).all()
+        queue = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.in_queue,
+            )
+            .all()
+        )
+        current: list = db.query(models.Song).filter(
+            models.Song.room == room, models.Song.status == models.SongState.is_playing
+        ).all()
+        played = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room, models.Song.status == models.SongState.played
+            )
+            .all()
+        )
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
