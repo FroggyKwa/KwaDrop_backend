@@ -152,6 +152,21 @@ async def connect(room_id: int, password: Optional[str] = None, session_data: Se
     return room
 
 
+@router.delete("/disconnect", dependencies=[Depends(cookie)])
+async def connect(session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        db.delete(a)
+        db.commit()
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This user has no association with any room.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return schemas.Success()
+
 
 @router.post("/create_session", dependencies=[Depends(cookie)])
 async def create_session(response: Response, session_data: SessionData = Depends(verifier.my_call)):
