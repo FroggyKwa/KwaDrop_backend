@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.params import Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -763,3 +764,12 @@ async def del_session(response: Response, session_id: UUID = Depends(cookie)):
     await backend.delete(session_id)
     cookie.delete_from_response(response)
     return "deleted session"
+
+
+@router.get("/lets_drink_tea", response_class=HTMLResponse)
+async def drink_tea(response: HTMLResponse):
+    """
+    *You seem tired, aren't you? Let's have a cup of tea and relax...*
+    """
+    response.status_code = status.HTTP_418_IM_A_TEAPOT
+    return response.render(''.join(open('tea.html', 'r')))
