@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi.params import Query
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -25,10 +26,15 @@ router = APIRouter()
     tags=["User"],
 )
 async def create_user(
-    name: str,
+    name: str = Query(..., description="""User name"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Creates a **User** for current session if one is not created yet.
+
+    </br>Returns a **User** object.
+    """
     try:
         session_id = session_data.dict()["session_id"]
         session_data.username = name
@@ -53,10 +59,15 @@ async def create_user(
     tags=["User"],
 )
 async def rename_user(
-    name: str,
+    name: str = Query(..., description="""New name"""),
     session_data: SessionData = Depends((verifier)),
     db: Session = Depends(get_db),
 ):
+    """
+    Changes **name** of *current* session's user.
+
+    </br>Returns a **User** object.
+    """
     try:
         user = get_user_by_session(session_data.session_id, db)
         setattr(user, "name", name)
@@ -77,6 +88,11 @@ async def rename_user(
 async def delete_user(
     session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
 ):
+    """
+    Deletes a *current* session's **User**.
+
+    </br>Returns a **User** object.
+    """
     try:  # todo: если юзер хост - удалаять комнату
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
@@ -104,11 +120,18 @@ async def delete_user(
     tags=["Room"],
 )
 async def create_room(
-    name: str,
-    password: Optional[str] = None,
+    name: str = Query(..., description="""Name of the room"""),
+    password: Optional[str] = Query(None, description="""Password of the room."""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Creates a **Room** for *current* user. User automatically connects to this room and becomes an administrator.
+
+    </br>Returns a **Room** object.
+
+        Note that user can belong to only one room.
+    """
     try:
         user = get_user_by_session(session_data.session_id, db)
         try:
@@ -140,6 +163,11 @@ async def create_room(
 async def get_roommates(
     session_data: SessionData = Depends((verifier)), db: Session = Depends(get_db)
 ):
+    """
+    Returns a list of **User** objects who are connected to *current* **Room**.
+
+        Note that API understands automatically which room is current user connected to.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a: models.Association = db.query(models.Association).filter(
@@ -168,11 +196,20 @@ async def get_roommates(
     tags=["Room"],
 )
 async def edit_room(
-    name: Optional[str] = None,
-    password: Optional[str] = None,
+    name: Optional[str] = Query(None, description="""New name"""),
+    password: Optional[str] = Query(None, description="""New password"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Edits **Room's** settings if **User** has a permission to do this action.
+
+    If you don't want to change a certain setting, do not include a certain parameter into request body.
+
+    Returns a **Room** object.
+
+        Note that API understands automatically which room is current user connected to.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a: models.Association = db.query(models.Association).filter(
@@ -210,6 +247,13 @@ async def edit_room(
 async def delete_room(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Deletes a **Room** if **User** has a permission to do this action. Automatically disconnects all users from this room.
+
+    Returns a **Room** object.
+
+        Note that API understands automatically which room is current user connected to.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a: models.Association = db.query(models.Association).filter(
@@ -243,11 +287,16 @@ async def delete_room(
 
 @router.post("/connect", dependencies=[Depends(cookie)], tags=["Room"])
 async def connect(
-    room_id: int,
-    password: Optional[str] = None,
+    room_id: int = Query(..., description="""Room id."""),
+    password: Optional[str] = Query(None, description="""Room password"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Connects **User** to **Room**.
+
+    Returns a **Room** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
@@ -288,6 +337,11 @@ async def connect(
 async def disconnect(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Disconnects **User** from a **Room**.
+
+        Note that API understands automatically which room is current user connected to.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -312,10 +366,17 @@ async def disconnect(
     tags=["Songs"],
 )
 async def add_song(
-    link: str,
+    link: str = Query(..., description="YouTube link to the music video"),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Adds a **Song** to the **Room** playlist.
+
+    Returns a **Song** object.
+
+        Note that this method does not play a song. To play a song use /playnext, /playprev or /playthis instead.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -352,6 +413,11 @@ async def add_song(
 async def playnext(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Plays next **Song** in the **Room** playlist.
+
+    Returns a currently playing **Song** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -409,6 +475,11 @@ async def playnext(
 async def playprev(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Plays previous **Song** in the **Room** playlist.
+
+    Returns a currently playing **Song** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -465,10 +536,15 @@ async def playprev(
     tags=["Songs"],
 )
 async def playthis(
-    song_id: int,
+    song_id: int = Query(..., description="""Song id"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Plays a chosen **Song** in the **Room** playlist.
+
+    Returns a currently playing **Song** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -493,6 +569,12 @@ async def playthis(
             else:
                 setattr(i, "status", models.SongState.is_playing)
         db.commit()
+        song = (
+            db.query(models.Song)
+            .filter(models.Song.room == room, models.Song.id == song_id)
+            .one()
+        )
+        return song
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -511,10 +593,15 @@ async def playthis(
     tags=["Songs"],
 )
 async def delete_song(
-    song_id: int,
+    song_id: int = Query(..., description="""Song id"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
+    """
+    Deletes a chosen **Song** from the **Room** playlist if **User** has a permission to do this action.
+
+    Returns a deleted **Song** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -562,6 +649,9 @@ async def delete_song(
 async def get_current_song(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Returns a currently playing **Song** object.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -594,6 +684,9 @@ async def get_current_song(
 async def get_playlist(
     session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)
 ):
+    """
+    Returns *current* room playlist as a list of **Song** objects.
+    """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
@@ -633,9 +726,14 @@ async def get_playlist(
 async def create_session(
     response: Response, session_data: SessionData = Depends(verifier.my_call)
 ):
+    """
+    Initializes a **Session** if one isn't initialized.
+    """
     try:
         if session_data is not None:
-            return f"session already exists"
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail=f"session already exists"
+            )
         session = uuid4()
         data = SessionData(session_id=str(session))
 
@@ -643,17 +741,25 @@ async def create_session(
         cookie.attach_to_response(response, session)
 
         return f"created session"
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/whoami", dependencies=[Depends(cookie)], tags=["Session"])
 async def whoami(session_data: SessionData = Depends(verifier)):
+    """
+    Returns **Session data** if session exists.
+    """
     return session_data
 
 
 @router.delete("/delete_session", tags=["Session"])
 async def del_session(response: Response, session_id: UUID = Depends(cookie)):
+    """
+    Deletes a **Session** if one exists.
+    """
     await backend.delete(session_id)
     cookie.delete_from_response(response)
     return "deleted session"

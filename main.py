@@ -7,7 +7,7 @@ from routes import routes
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="KwaDrop Backend API")
 
 origins = ["*"]
 

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from fastapi_sessions.backends.implementations import InMemoryBackend
 from fastapi_sessions.session_verifier import SessionVerifier
 from fastapi_sessions.frontends.implementations import SessionCookie, CookieParameters
+from starlette import status
 from starlette.requests import Request
 
 
@@ -73,7 +74,9 @@ verifier = BasicVerifier(
     identifier="general_verifier",
     auto_error=True,
     backend=backend,
-    auth_http_exception=HTTPException(status_code=403, detail="invalid session"),
+    auth_http_exception=HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session"
+    ),
 )
 
 # app = FastAPI()
