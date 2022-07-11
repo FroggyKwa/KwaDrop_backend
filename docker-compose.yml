@@ -8,14 +8,13 @@ services:
         PORT: "${PORT}"
         NAME: "${NAME}"
     ports:
-      - "443:${PORT}"
+      - "${PORT}:${PORT}"
     environment:
       PORT: "${PORT}"
       NAME: "${NAME}"
     restart: always
     volumes:
       - static:/usr/src/kwadrop_backend/static
-      - /etc/letsencrypt/live/kwa-drop.ru:/etc/letsencrypt/live/kwa-drop.ru
     depends_on:
       - db
 
