@@ -8,7 +8,7 @@ services:
         PORT: "${PORT}"
         NAME: "${NAME}"
     ports:
-      - "${PORT}:${PORT}"
+      - "443:${PORT}"
     environment:
       PORT: "${PORT}"
       NAME: "${NAME}"
