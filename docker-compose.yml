@@ -15,6 +15,7 @@ services:
     restart: always
     volumes:
       - static:/usr/src/kwadrop_backend/static
+      - /etc/letsencrypt/live/kwa-drop.ru:/etc/letsencrypt/live/kwa-drop.ru
     depends_on:
       - db
 
