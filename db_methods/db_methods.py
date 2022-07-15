@@ -43,9 +43,9 @@ def create_room(name: str, password: str, user: models.User, db: Session):
 
 def get_user_by_session(session_id: str, db: Session):
     try:
-        user: list[models.User] = db.query(models.User).filter(
-            models.User.session_id == session_id
-        ).one()
+        user: list[models.User] = (
+            db.query(models.User).filter(models.User.session_id == session_id).one()
+        )
         assert user, "There is no user for this session"
     except AssertionError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

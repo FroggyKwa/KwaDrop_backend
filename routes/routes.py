@@ -171,9 +171,9 @@ async def get_roommates(
     """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
-        a: models.Association = db.query(models.Association).filter(
-            models.Association.user == user
-        ).one()
+        a: models.Association = (
+            db.query(models.Association).filter(models.Association.user == user).one()
+        )
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
         a_list = (
             db.query(models.Association).filter(models.Association.room == room).all()
@@ -213,9 +213,9 @@ async def edit_room(
     """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
-        a: models.Association = db.query(models.Association).filter(
-            models.Association.user == user
-        ).one()
+        a: models.Association = (
+            db.query(models.Association).filter(models.Association.user == user).one()
+        )
         if a.usertype not in (models.UserType.host, models.UserType.moder):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -257,9 +257,9 @@ async def delete_room(
     """
     try:
         user: models.User = get_user_by_session(session_data.session_id, db)
-        a: models.Association = db.query(models.Association).filter(
-            models.Association.user == user
-        ).one()
+        a: models.Association = (
+            db.query(models.Association).filter(models.Association.user == user).one()
+        )
         if a.usertype not in (models.UserType.host, models.UserType.moder):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -431,9 +431,14 @@ async def playnext(
             )
             .all()
         )
-        current: list = db.query(models.Song).filter(
-            models.Song.room == room, models.Song.status == models.SongState.is_playing
-        ).all()
+        current: list = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.is_playing,
+            )
+            .all()
+        )
         played = (
             db.query(models.Song)
             .filter(
@@ -493,9 +498,14 @@ async def playprev(
             )
             .all()
         )
-        current: list = db.query(models.Song).filter(
-            models.Song.room == room, models.Song.status == models.SongState.is_playing
-        ).all()
+        current: list = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.is_playing,
+            )
+            .all()
+        )
         played = (
             db.query(models.Song)
             .filter(
@@ -657,9 +667,14 @@ async def get_current_song(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        current: list = db.query(models.Song).filter(
-            models.Song.room == room, models.Song.status == models.SongState.is_playing
-        ).all()
+        current: list = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.is_playing,
+            )
+            .all()
+        )
         if not current:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Nothing is playing."
@@ -700,9 +715,14 @@ async def get_playlist(
             )
             .all()
         )
-        current: list = db.query(models.Song).filter(
-            models.Song.room == room, models.Song.status == models.SongState.is_playing
-        ).all()
+        current: list = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.is_playing,
+            )
+            .all()
+        )
         played = (
             db.query(models.Song)
             .filter(
@@ -772,4 +792,4 @@ async def drink_tea(response: HTMLResponse):
     *You seem tired, aren't you? Let's have a cup of tea and relax...*
     """
     response.status_code = status.HTTP_418_IM_A_TEAPOT
-    return response.render(''.join(open('tea.html', 'r')))
+    return response.render("".join(open("tea.html", "r")))
