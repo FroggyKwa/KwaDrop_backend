@@ -33,4 +33,4 @@ volumes:
 
 networks:
   default:
-    name: "${NAME}_backend_network"
+    name: "${NAME}_network"

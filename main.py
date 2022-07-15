@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from database.db import engine
@@ -10,7 +10,12 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="KwaDrop Backend API")
 
-origins = ["*"]
+origins = [
+    "http://localhost:8021",
+    "https://localhost:8021",
+    "http://app",
+    "https://app",
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,7 +23,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["set-cookie"],
+    expose_headers=["set-cookie", "Set-Cookie"],
 )
 
 app.include_router(routes.router)

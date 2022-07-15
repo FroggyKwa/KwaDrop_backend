@@ -16,7 +16,7 @@ class SessionData(BaseModel):
     session_id: str
 
 
-cookie_params = CookieParameters()
+cookie_params = CookieParameters(secure=True, samesite="none")
 
 # Uses UUID
 cookie = SessionCookie(
