@@ -13,6 +13,7 @@ from starlette.requests import Request
 
 class SessionData(BaseModel):
     username: Optional[str]
+    userid: Optional[int]
     session_id: str
 
 

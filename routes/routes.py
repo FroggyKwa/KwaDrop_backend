@@ -38,9 +38,11 @@ async def create_user(
     """
     try:
         session_id = session_data.dict()["session_id"]
-        session_data.username = name
-        user = db_create_user(name, session_id, db)
+        db_create_user(name, session_id, db)
         db.commit()
+        user = get_user_by_session(session_id, db)
+        data = SessionData(username=name, userid=user.id, session_id=session_id)
+        await backend.update(session_id=UUID(session_id), data=data)
     except IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -73,6 +75,9 @@ async def rename_user(
         user = get_user_by_session(session_data.session_id, db)
         setattr(user, "name", name)
         db.commit()
+        data = SessionData(username=name, userid=user.id, session_id=session_data.session_id)
+        await backend.update(session_id=UUID(session_data.session_id), data=data)
+
     except HTTPException as e:
         raise e
     except Exception as e:
