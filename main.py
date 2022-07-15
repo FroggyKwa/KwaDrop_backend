@@ -13,6 +13,8 @@ app = FastAPI(title="KwaDrop Backend API")
 origins = [
     "http://localhost:8021",
     "https://localhost:8021",
+    "http://localhost:8080",
+    "https://localhost:8080",
     "http://app",
     "https://app",
 ]
