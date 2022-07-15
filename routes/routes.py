@@ -65,7 +65,12 @@ async def create_user(
 
             await save_file(avatar, out_path)
         session_id = session_data.dict()["session_id"]
-        db_create_user(avatar=out_path if avatar is not None else None, name=name, session_id=session_id, db=db)
+        db_create_user(
+            avatar=out_path if avatar is not None else None,
+            name=name,
+            session_id=session_id,
+            db=db,
+        )
         db.commit()
         user = get_user_by_session(session_id, db)
         data = SessionData(username=name, userid=user.id, session_id=session_id)
@@ -82,7 +87,8 @@ async def create_user(
     return user
 
 
-@router.patch("/update_avatar",
+@router.patch(
+    "/update_avatar",
     dependencies=[Depends(cookie)],
     response_model=schemas.User,
     tags=["User"],
@@ -104,7 +110,7 @@ async def update_avatar(
 
             await save_file(avatar, out_path)
         user = get_user_by_session(session_data.session_id, db)
-        setattr(user, 'avatar', out_path if avatar is not None else None)
+        setattr(user, "avatar", out_path if avatar is not None else None)
         db.commit()
     except HTTPException as e:
         raise e
@@ -133,7 +139,9 @@ async def rename_user(
         user = get_user_by_session(session_data.session_id, db)
         setattr(user, "name", name)
         db.commit()
-        data = SessionData(username=name, userid=user.id, session_id=session_data.session_id)
+        data = SessionData(
+            username=name, userid=user.id, session_id=session_data.session_id
+        )
         await backend.update(session_id=UUID(session_data.session_id), data=data)
 
     except HTTPException as e:
@@ -855,13 +863,17 @@ async def get_img(path: str = Query(..., description="""Image file path""")):
     Returns image **File** if such exists.
     """
     try:
-        f = open(path, 'rb')
+        f = open(path, "rb")
         f.close()
-        if path.split('/')[0] != 'images':
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found.")
+        if path.split("/")[0] != "images":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found."
+            )
         return FileResponse(path=path)
     except OSError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found."
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
