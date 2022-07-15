@@ -1,8 +1,11 @@
+import secrets
+import aiofiles
+import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.params import Query
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile
+from fastapi.params import Query, File
+from fastapi.responses import HTMLResponse, FileResponse
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -20,6 +23,24 @@ from pytube import YouTube
 router = APIRouter()
 
 
+async def save_file(file: UploadFile, out_path: str, max_size=15):
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Загружать можно только картинки")
+
+    size = 1024
+    async with aiofiles.open(out_path, "wb") as out_file:
+        content = await file.read(1024 * 1024)
+        while content:
+            await out_file.write(content)
+            content = await file.read(1024 * 1024)
+            size += 1024
+
+            if max_size:
+                if size / 1024 > max_size:
+                    os.unlink(out_path)
+                    raise HTTPException(status_code=400, detail="File exceeds max size")
+
+
 @router.post(
     "/create_user",
     dependencies=[Depends(cookie)],
@@ -28,6 +49,7 @@ router = APIRouter()
 )
 async def create_user(
     name: str = Query(..., description="""User name"""),
+    avatar: Optional[UploadFile] = File(None, description="""User avatar"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
@@ -37,8 +59,13 @@ async def create_user(
     </br>Returns a **User** object.
     """
     try:
+        if avatar is not None:
+            filename = secrets.token_hex(64) + ".jpg"
+            out_path = f"images/{filename}"
+
+            await save_file(avatar, out_path)
         session_id = session_data.dict()["session_id"]
-        db_create_user(name, session_id, db)
+        db_create_user(avatar=out_path if avatar is not None else None, name=name, session_id=session_id, db=db)
         db.commit()
         user = get_user_by_session(session_id, db)
         data = SessionData(username=name, userid=user.id, session_id=session_id)
@@ -48,6 +75,37 @@ async def create_user(
             status_code=status.HTTP_409_CONFLICT,
             detail="User for this session already exists.",
         )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return user
+
+
+@router.patch("/update_avatar",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.User,
+    tags=["User"],
+)
+async def update_avatar(
+    avatar: Optional[UploadFile] = File(None, description="""New avatar"""),
+    session_data: SessionData = Depends((verifier)),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates or deletes **User** avatar image.
+
+    Returns a **User** object.
+    """
+    try:
+        if avatar is not None:
+            filename = secrets.token_hex(64) + ".jpg"
+            out_path = f"images/{filename}"
+
+            await save_file(avatar, out_path)
+        user = get_user_by_session(session_data.session_id, db)
+        setattr(user, 'avatar', out_path if avatar is not None else None)
+        db.commit()
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -99,7 +157,7 @@ async def delete_user(
 
     </br>Returns a **User** object.
     """
-    try:  # todo: если юзер хост - удалаять комнату
+    try:
         user: models.User = get_user_by_session(session_data.session_id, db)
         try:
             a = (
@@ -789,6 +847,25 @@ async def del_session(response: Response, session_id: UUID = Depends(cookie)):
     await backend.delete(session_id)
     cookie.delete_from_response(response)
     return "deleted session"
+
+
+@router.get("/get_img", response_class=FileResponse)
+async def get_img(path: str = Query(..., description="""Image file path""")):
+    """
+    Returns image **File** if such exists.
+    """
+    try:
+        f = open(path, 'rb')
+        f.close()
+        if path.split('/')[0] != 'images':
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found.")
+        return FileResponse(path=path)
+    except OSError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image is not found.")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/lets_drink_tea", response_class=HTMLResponse)

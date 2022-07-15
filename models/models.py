@@ -24,6 +24,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
+    avatar = Column(String)
     name = Column(String, nullable=False)
     session_id = Column(String, nullable=False, unique=True)
 

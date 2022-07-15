@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 import models.models
@@ -11,6 +13,7 @@ class User(BaseModel):
     id: int
     name: str
     session_id: str
+    avatar: Optional[str]
 
     class Config:
         orm_mode = True
