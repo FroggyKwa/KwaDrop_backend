@@ -14,6 +14,7 @@ from database.db import get_db
 from db_methods.db_methods import (
     create_user as db_create_user,
     get_user_by_session,
+    get_room_playlist,
     create_room as db_create_room,
 )
 from models import models, schemas
@@ -439,8 +440,9 @@ async def disconnect(
 )
 async def add_song(
     link: str = Query(..., description="YouTube link to the music video"),
+    queue_num: Optional[int] = Query(None, description="""Index of song in playlist after which this **Song** should be put in."""),
     session_data: SessionData = Depends(verifier),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     """
     Adds a **Song** to the **Room** playlist.
@@ -454,15 +456,39 @@ async def add_song(
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
 
-        yt = YouTube(link)
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        if queue_num is None:
+            if len(playlist) == 0:
+                yt = YouTube(link)
 
-        song = models.Song(
-            user=user,
-            link=yt.streams.filter(only_audio=True)[0].url,
-            room=room,
-            status=models.SongState.in_queue,
-        )
-        db.add(song)
+                song = models.Song(
+                    user=user,
+                    link=yt.streams.filter(only_audio=True)[0].url,
+                    room=room,
+                    queue_num=1,
+                    status=models.SongState.in_queue,
+                )
+                db.add(song)
+                db.commit()
+                return song
+            queue_num = max([i.queue_num for i in playlist])
+        if all(i.queue_num != queue_num for i in playlist):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No song found with queue index {queue_num}")
+
+        for i in range(len(playlist)):
+            if playlist[i].queue_num == queue_num:
+                yt = YouTube(link)
+
+                song = models.Song(
+                    user=user,
+                    link=yt.streams.filter(only_audio=True)[0].url,
+                    room=room,
+                    queue_num=queue_num + 1,
+                    status=models.SongState.in_queue,
+                )
+                db.add(song)
+            if playlist[i].queue_num > queue_num:
+                setattr(playlist[i], 'queue_num', playlist[i].queue_num + 1)
         db.commit()
     except NoResultFound:
         raise HTTPException(
@@ -494,43 +520,35 @@ async def playnext(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        queue = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.in_queue,
-            )
-            .all()
-        )
-        current: list = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.is_playing,
-            )
-            .all()
-        )
-        played = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room, models.Song.status == models.SongState.played
-            )
-            .all()
-        )
-        if not current and not queue and not played:
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        if not playlist:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
             )
-        if not queue and not played:
-            return current[0]
-        if not queue:
-            for i in played:
-                setattr(i, "status", models.SongState.in_queue)
-            queue = played
-        if current:
-            setattr(current[0], "status", models.SongState.played)
-        setattr(queue[0], "status", models.SongState.is_playing)
-        db.commit()
+        if len(playlist) == 1:
+            setattr(playlist[0], 'status', models.SongState.is_playing)
+            db.commit()
+            return playlist[0]
+        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
+        if not current_index:
+            setattr(playlist[0], 'status', models.SongState.is_playing)
+            db.commit()
+            return playlist[0]
+        if current_index == playlist[-1].queue_num:
+            setattr(playlist[0], 'status', models.SongState.is_playing)
+            for i in playlist[1:]:
+                setattr(i, 'status', models.SongState.in_queue)
+            db.commit()
+            return playlist[0]
+        else:
+            for i in playlist:
+                if i.queue_num == current_index:
+                    setattr(i, 'status', models.SongState.played)
+                elif i.queue_num == current_index + 1:
+                    setattr(i, 'status', models.SongState.is_playing)
+                    song = i
+            db.commit()
+            return song
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -540,7 +558,6 @@ async def playnext(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return queue[0]
 
 
 @router.patch(
@@ -561,45 +578,30 @@ async def playprev(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        queue = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.in_queue,
-            )
-            .all()
-        )
-        current: list = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.is_playing,
-            )
-            .all()
-        )
-        played = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room, models.Song.status == models.SongState.played
-            )
-            .all()
-        )
-        if not current and not queue and not played:
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        if not playlist:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
             )
-        if not queue and not played:
-            return current[0]
-        if current:
-            setattr(current[0], "status", models.SongState.in_queue)
-        if not played:
-            setattr(queue[-1], "status", models.SongState.is_playing)
+        if len(playlist) == 1:
+            setattr(playlist[0], 'status', models.SongState.is_playing)
             db.commit()
-            return queue[-1]
+            return playlist[0]
+        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
+        if current_index == playlist[0].queue_num:
+            setattr(playlist[-1], "status", models.SongState.is_playing)
+            setattr(playlist[0], 'status', models.SongState.in_queue)
+            db.commit()
+            return playlist[-1]
         else:
-            setattr(played[-1], "status", models.SongState.is_playing)
+            for i in playlist:
+                if i.queue_num == current_index:
+                    setattr(i, 'status', models.SongState.in_queue)
+                elif i.queue_num == current_index - 1:
+                    setattr(i, 'status', models.SongState.is_playing)
+                    song = i
             db.commit()
-            return played[-1]
+            return song
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -618,7 +620,7 @@ async def playprev(
     tags=["Songs"],
 )
 async def playthis(
-    song_id: int = Query(..., description="""Song id"""),
+    queue_num: int = Query(..., description="""Song index"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
@@ -631,32 +633,88 @@ async def playthis(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        try:
-            song = (
-                db.query(models.Song)
-                .filter(models.Song.id == song_id, models.Song.room == room)
-                .one()
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        if not playlist:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
             )
-        except NoResultFound:
+        if all(i.queue_num != queue_num for i in playlist):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"There is no song in this room with id {song_id}.",
+                detail=f"There is no song in this room playlist with index {queue_num}.",
             )
-        songs = db.query(models.Song).filter(models.Song.room == room).all()
-        for i in songs:
-            if i.id < song_id:
+        for i in playlist:
+            if i.queue_num < queue_num:
                 setattr(i, "status", models.SongState.played)
-            elif i.id > song_id:
+            elif i.queue_num > queue_num:
                 setattr(i, "status", models.SongState.in_queue)
             else:
                 setattr(i, "status", models.SongState.is_playing)
+                song = i
         db.commit()
-        song = (
-            db.query(models.Song)
-            .filter(models.Song.room == room, models.Song.id == song_id)
-            .one()
-        )
         return song
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user has no association with any room.",
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.patch("/swap_songs",
+    dependencies=[Depends(cookie)],
+    response_model=schemas.Success,
+    tags=["Songs"],)
+async def swap_songs(
+    queue_num1: int = Query(..., description="""Song index"""),
+        queue_num2: int = Query(..., description="""Song index"""),
+        session_data: SessionData = Depends(verifier),
+    db: Session = Depends(get_db),
+):
+    """
+    Swaps **Songs** with given indexes in the room playlist.
+    """
+    try:
+        user: models.User = get_user_by_session(session_data.session_id, db)
+        a = db.query(models.Association).filter(models.Association.user == user).one()
+        room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        l, h = min(queue_num1, queue_num2), max(queue_num1, queue_num2)  # lower, higher in playlist
+        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
+        if all(i.queue_num != l for i in playlist) or all(i.queue_num != h for i in playlist):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"There is no song in this room playlist with index {l} or with index {h}.",
+            )
+        if l == h:
+            return schemas.Success
+        if not current_index or current_index < l or current_index > h:
+            for i in playlist:
+                if i.queue_num == l:
+                    setattr(i, 'queue_num', h)
+                if i.queue_num == h:
+                    setattr(i, 'queue_num', l)
+            db.commit()
+            return schemas.Success
+        if current_index == l:
+            for i in range(l + 1, h):
+                setattr(playlist[i], 'status', models.SongState.played)
+            setattr(playlist[h], 'status', models.SongState.played)
+        elif current_index == h:
+            for i in range(l + 1, h):
+                setattr(playlist[i], 'status', models.SongState.in_queue)
+            setattr(playlist[l], 'status', models.SongState.in_queue)
+        else:
+            setattr(playlist[h], 'status', models.SongState.played)
+            setattr(playlist[l], 'status', models.SongState.in_queue)
+        setattr(playlist[h], 'queue_num', l)
+        setattr(playlist[l], 'queue_num', h)
+        db.commit()
+        return schemas.Success
+
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -675,7 +733,7 @@ async def playthis(
     tags=["Songs"],
 )
 async def delete_song(
-    song_id: int = Query(..., description="""Song id"""),
+    queue_num: int = Query(..., description="""Song index"""),
     session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
@@ -697,19 +755,20 @@ async def delete_song(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This user has no permission to perform this action.",
             )
-        try:
-            song = (
-                db.query(models.Song)
-                .filter(models.Song.id == song_id, models.Song.room == room)
-                .one()
-            )
-            db.delete(song)
-            db.commit()
-        except NoResultFound:
+        playlist: list[models.Song] = get_room_playlist(room, db)
+        if all(i.queue_num != queue_num for i in playlist):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"There is no song in this room with id {song_id}.",
+                detail=f"There is no song in this room playlist with index {queue_num}.",
             )
+        for i in range(len(playlist)):
+            if i == queue_num:
+                song = playlist[i]
+                continue
+            if i > queue_num:
+                setattr(playlist[i], 'queue_num', playlist[i].queue_num - 1)
+        db.delete(song)
+        db.commit()
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -738,18 +797,14 @@ async def get_current_song(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        current: list = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.is_playing,
-            )
-            .all()
+        playlist = get_room_playlist(room, db)
+
+        for i in playlist:
+            if i.status == models.SongState.is_playing:
+                return i
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Nothing is playing."
         )
-        if not current:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Nothing is playing."
-            )
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -759,7 +814,6 @@ async def get_current_song(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return current[0]
 
 
 @router.post(
@@ -778,29 +832,7 @@ async def get_playlist(
         user: models.User = get_user_by_session(session_data.session_id, db)
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
-        queue = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.in_queue,
-            )
-            .all()
-        )
-        current: list = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room,
-                models.Song.status == models.SongState.is_playing,
-            )
-            .all()
-        )
-        played = (
-            db.query(models.Song)
-            .filter(
-                models.Song.room == room, models.Song.status == models.SongState.played
-            )
-            .all()
-        )
+        return schemas.Playlist(songs=get_room_playlist(room, db))
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -810,8 +842,6 @@ async def get_playlist(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    playlist = played + current + queue
-    return schemas.Playlist(songs=playlist)
 
 
 @router.post("/create_session", dependencies=[Depends(cookie)], tags=["Session"])

@@ -58,6 +58,7 @@ class Song(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     link = Column(String, nullable=False)
     status = Column(Enum(SongState), default=SongState.in_queue)
+    queue_num = Column(Integer, nullable=False)
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     room_id = Column(ForeignKey("rooms.id"), primary_key=True)
 

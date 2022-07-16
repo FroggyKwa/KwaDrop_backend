@@ -30,6 +30,7 @@ class Room(BaseModel):
 class Song(BaseModel):
     id: int
     link: str
+    queue_num: int
     status: models.models.SongState
     user: User
 

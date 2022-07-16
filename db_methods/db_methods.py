@@ -58,3 +58,38 @@ def get_user_by_session(session_id: str, db: Session):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return user
+
+
+def get_room_playlist(room: models.Room, db: Session):
+    try:
+        queue = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.in_queue,
+            )
+            .all()
+        )
+        current: list = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room,
+                models.Song.status == models.SongState.is_playing,
+            )
+            .all()
+        )
+        played = (
+            db.query(models.Song)
+            .filter(
+                models.Song.room == room, models.Song.status == models.SongState.played
+            )
+            .all()
+        )
+        playlist = played + current + queue
+    except NoResultFound:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return sorted(playlist, key=lambda x: x.queue_num)
