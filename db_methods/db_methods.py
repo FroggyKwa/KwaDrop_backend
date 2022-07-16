@@ -87,9 +87,7 @@ def get_room_playlist(room: models.Room, db: Session):
         )
         playlist = played + current + queue
     except NoResultFound:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return sorted(playlist, key=lambda x: x.queue_num)

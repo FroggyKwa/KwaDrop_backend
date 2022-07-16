@@ -440,9 +440,12 @@ async def disconnect(
 )
 async def add_song(
     link: str = Query(..., description="YouTube link to the music video"),
-    queue_num: Optional[int] = Query(None, description="""Index of song in playlist after which this **Song** should be put in."""),
+    queue_num: Optional[int] = Query(
+        None,
+        description="""Index of song in playlist after which this **Song** should be put in.""",
+    ),
     session_data: SessionData = Depends(verifier),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Adds a **Song** to the **Room** playlist.
@@ -473,7 +476,10 @@ async def add_song(
                 return song
             queue_num = max([i.queue_num for i in playlist])
         if all(i.queue_num != queue_num for i in playlist):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No song found with queue index {queue_num}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No song found with queue index {queue_num}",
+            )
 
         for i in range(len(playlist)):
             if playlist[i].queue_num == queue_num:
@@ -488,7 +494,7 @@ async def add_song(
                 )
                 db.add(song)
             if playlist[i].queue_num > queue_num:
-                setattr(playlist[i], 'queue_num', playlist[i].queue_num + 1)
+                setattr(playlist[i], "queue_num", playlist[i].queue_num + 1)
         db.commit()
     except NoResultFound:
         raise HTTPException(
@@ -526,26 +532,31 @@ async def playnext(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
             )
         if len(playlist) == 1:
-            setattr(playlist[0], 'status', models.SongState.is_playing)
+            setattr(playlist[0], "status", models.SongState.is_playing)
             db.commit()
             return playlist[0]
-        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
+        current_index = max(
+            [
+                i.queue_num if i.status == models.SongState.is_playing else 0
+                for i in playlist
+            ]
+        )
         if not current_index:
-            setattr(playlist[0], 'status', models.SongState.is_playing)
+            setattr(playlist[0], "status", models.SongState.is_playing)
             db.commit()
             return playlist[0]
         if current_index == playlist[-1].queue_num:
-            setattr(playlist[0], 'status', models.SongState.is_playing)
+            setattr(playlist[0], "status", models.SongState.is_playing)
             for i in playlist[1:]:
-                setattr(i, 'status', models.SongState.in_queue)
+                setattr(i, "status", models.SongState.in_queue)
             db.commit()
             return playlist[0]
         else:
             for i in playlist:
                 if i.queue_num == current_index:
-                    setattr(i, 'status', models.SongState.played)
+                    setattr(i, "status", models.SongState.played)
                 elif i.queue_num == current_index + 1:
-                    setattr(i, 'status', models.SongState.is_playing)
+                    setattr(i, "status", models.SongState.is_playing)
                     song = i
             db.commit()
             return song
@@ -584,21 +595,26 @@ async def playprev(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Playlist is empty."
             )
         if len(playlist) == 1:
-            setattr(playlist[0], 'status', models.SongState.is_playing)
+            setattr(playlist[0], "status", models.SongState.is_playing)
             db.commit()
             return playlist[0]
-        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
+        current_index = max(
+            [
+                i.queue_num if i.status == models.SongState.is_playing else 0
+                for i in playlist
+            ]
+        )
         if current_index == playlist[0].queue_num:
             setattr(playlist[-1], "status", models.SongState.is_playing)
-            setattr(playlist[0], 'status', models.SongState.in_queue)
+            setattr(playlist[0], "status", models.SongState.in_queue)
             db.commit()
             return playlist[-1]
         else:
             for i in playlist:
                 if i.queue_num == current_index:
-                    setattr(i, 'status', models.SongState.in_queue)
+                    setattr(i, "status", models.SongState.in_queue)
                 elif i.queue_num == current_index - 1:
-                    setattr(i, 'status', models.SongState.is_playing)
+                    setattr(i, "status", models.SongState.is_playing)
                     song = i
             db.commit()
             return song
@@ -664,14 +680,16 @@ async def playthis(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.patch("/swap_songs",
+@router.patch(
+    "/swap_songs",
     dependencies=[Depends(cookie)],
     response_model=schemas.Success,
-    tags=["Songs"],)
+    tags=["Songs"],
+)
 async def swap_songs(
     queue_num1: int = Query(..., description="""Song index"""),
-        queue_num2: int = Query(..., description="""Song index"""),
-        session_data: SessionData = Depends(verifier),
+    queue_num2: int = Query(..., description="""Song index"""),
+    session_data: SessionData = Depends(verifier),
     db: Session = Depends(get_db),
 ):
     """
@@ -682,9 +700,19 @@ async def swap_songs(
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
         playlist: list[models.Song] = get_room_playlist(room, db)
-        l, h = min(queue_num1, queue_num2), max(queue_num1, queue_num2)  # lower, higher in playlist
-        current_index = max([i.queue_num if i.status == models.SongState.is_playing else 0 for i in playlist])
-        if all(i.queue_num != l for i in playlist) or all(i.queue_num != h for i in playlist):
+        l, h = (
+            min(queue_num1, queue_num2),
+            max(queue_num1, queue_num2),
+        )  # lower, higher in playlist
+        current_index = max(
+            [
+                i.queue_num if i.status == models.SongState.is_playing else 0
+                for i in playlist
+            ]
+        )
+        if all(i.queue_num != l for i in playlist) or all(
+            i.queue_num != h for i in playlist
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"There is no song in this room playlist with index {l} or with index {h}.",
@@ -694,24 +722,24 @@ async def swap_songs(
         if not current_index or current_index < l or current_index > h:
             for i in playlist:
                 if i.queue_num == l:
-                    setattr(i, 'queue_num', h)
+                    setattr(i, "queue_num", h)
                 if i.queue_num == h:
-                    setattr(i, 'queue_num', l)
+                    setattr(i, "queue_num", l)
             db.commit()
             return schemas.Success
         if current_index == l:
             for i in range(l + 1, h):
-                setattr(playlist[i], 'status', models.SongState.played)
-            setattr(playlist[h], 'status', models.SongState.played)
+                setattr(playlist[i], "status", models.SongState.played)
+            setattr(playlist[h], "status", models.SongState.played)
         elif current_index == h:
             for i in range(l + 1, h):
-                setattr(playlist[i], 'status', models.SongState.in_queue)
-            setattr(playlist[l], 'status', models.SongState.in_queue)
+                setattr(playlist[i], "status", models.SongState.in_queue)
+            setattr(playlist[l], "status", models.SongState.in_queue)
         else:
-            setattr(playlist[h], 'status', models.SongState.played)
-            setattr(playlist[l], 'status', models.SongState.in_queue)
-        setattr(playlist[h], 'queue_num', l)
-        setattr(playlist[l], 'queue_num', h)
+            setattr(playlist[h], "status", models.SongState.played)
+            setattr(playlist[l], "status", models.SongState.in_queue)
+        setattr(playlist[h], "queue_num", l)
+        setattr(playlist[l], "queue_num", h)
         db.commit()
         return schemas.Success
 
@@ -766,7 +794,7 @@ async def delete_song(
                 song = playlist[i]
                 continue
             if i > queue_num:
-                setattr(playlist[i], 'queue_num', playlist[i].queue_num - 1)
+                setattr(playlist[i], "queue_num", playlist[i].queue_num - 1)
         db.delete(song)
         db.commit()
     except NoResultFound:
