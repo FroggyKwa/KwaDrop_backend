@@ -743,17 +743,17 @@ async def swap_songs(
             return schemas.Success()
         if current_index == l:
             for i in range(l + 1, h):
-                setattr(playlist[i], "status", models.SongState.played)
-            setattr(playlist[h], "status", models.SongState.played)
+                setattr(playlist[i - 1], "status", models.SongState.played)
+            setattr(playlist[h - 1], "status", models.SongState.played)
         elif current_index == h:
             for i in range(l + 1, h):
-                setattr(playlist[i], "status", models.SongState.in_queue)
-            setattr(playlist[l], "status", models.SongState.in_queue)
+                setattr(playlist[i - 1], "status", models.SongState.in_queue)
+            setattr(playlist[l - 1], "status", models.SongState.in_queue)
         else:
-            setattr(playlist[h], "status", models.SongState.played)
-            setattr(playlist[l], "status", models.SongState.in_queue)
-        setattr(playlist[h], "queue_num", l)
-        setattr(playlist[l], "queue_num", h)
+            setattr(playlist[h - 1], "status", models.SongState.played)
+            setattr(playlist[l - 1], "status", models.SongState.in_queue)
+        setattr(playlist[h - 1], "queue_num", l)
+        setattr(playlist[l - 1], "queue_num", h)
         db.commit()
         return schemas.Success()
 
