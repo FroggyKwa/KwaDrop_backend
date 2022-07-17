@@ -1,6 +1,10 @@
 from fastapi import FastAPI
+from fastapi.params import Body
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.responses import JSONResponse
+
+from worker import create_task
 
 from database.db import engine
 from models import models, schemas
@@ -34,3 +38,11 @@ app.include_router(routes.router)
 @app.get("/")
 async def home():
     return {"message": "Hello World"}
+
+
+@app.post("/tasks", status_code=201)
+def run_task(payload=Body(...)):
+    task_type = payload["type"]
+    task = create_task.delay(int(task_type))
+    return JSONResponse({"task_id": task.id})
+

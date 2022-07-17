@@ -12,11 +12,14 @@ services:
     environment:
       PORT: "${PORT}"
       NAME: "${NAME}"
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL}"
+      CELERY_RESULT_BACKEND: "${CELERY_BROKER_URL}"
     restart: always
     volumes:
       - static:/usr/src/kwadrop_backend/static
     depends_on:
       - db
+      - redis
 
   db:
     image: postgres:latest
@@ -26,6 +29,21 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
       - db-data:/var/lib/postgresql/data
+
+  worker:
+    build: ./
+    command: celery worker --app=worker.celery --loglevel=info
+    volumes:
+      - ./project:/usr/src/app
+    environment:
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL}"
+      CELERY_RESULT_BACKEND: "${CELERY_BROKER_URL}"
+    depends_on:
+      - backend
+      - redis
+
+  redis:
+    image: redis:6-alpine
 
 volumes:
   db-data:
