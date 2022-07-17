@@ -3,14 +3,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.params import Body
 from starlette import status
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.responses import JSONResponse
 
 from worker import create_task
 
 from database.db import engine
-from models import models, schemas
-from routes import routes
+from models import models
+from routes import routes, room_routes, song_routes, user_routes
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -35,6 +34,9 @@ app.add_middleware(
 )
 
 app.include_router(routes.router)
+app.include_router(user_routes.router)
+app.include_router(room_routes.router)
+app.include_router(song_routes.router)
 
 
 @app.get("/")

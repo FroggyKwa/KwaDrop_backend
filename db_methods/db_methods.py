@@ -1,11 +1,9 @@
 from models import models
 
-from database.db import get_db
-
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
-from fastapi import HTTPException, Depends, status
+from fastapi import HTTPException, status
 
 
 def create_user(avatar: str, name: str, session_id: str, db: Session):

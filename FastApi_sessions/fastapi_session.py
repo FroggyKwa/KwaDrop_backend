@@ -1,8 +1,8 @@
 from typing import Optional
 
 from pydantic import BaseModel
-from fastapi import HTTPException, FastAPI, Response, Depends
-from uuid import UUID, uuid4
+from fastapi import HTTPException
+from uuid import UUID
 
 from fastapi_sessions.backends.implementations import InMemoryBackend
 from fastapi_sessions.session_verifier import SessionVerifier

@@ -1,10 +1,8 @@
 import os
-import time
 
 from celery import Celery
 from dotenv import load_dotenv
 
-import models.models
 from database.db import get_db
 from helpers import delete_images_not_in_db
 
