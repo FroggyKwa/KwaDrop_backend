@@ -856,7 +856,7 @@ async def get_current_song(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post(
+@router.get(
     "/get_playlist",
     dependencies=[Depends(cookie)],
     response_model=schemas.Playlist,
