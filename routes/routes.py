@@ -5,6 +5,7 @@ import os
 from typing import Optional
 
 import pytube.exceptions
+import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile
 from fastapi.params import Query, File
 from fastapi.responses import HTMLResponse, FileResponse
@@ -462,6 +463,7 @@ async def add_song(
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
 
         yt = YouTube(link)
+        avatar = f'https://img.youtube.com/vi/{yt.video_id}/hqdefault.jpg'
 
         playlist: list[models.Song] = get_room_playlist(room, db)
         if queue_num is None:
@@ -469,6 +471,7 @@ async def add_song(
                 song = models.Song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
+                    avatar=avatar,
                     room=room,
                     queue_num=1,
                     status=models.SongState.in_queue,
@@ -489,6 +492,7 @@ async def add_song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
                     room=room,
+                    avatar=avatar,
                     queue_num=queue_num + 1,
                     status=models.SongState.in_queue,
                 )
