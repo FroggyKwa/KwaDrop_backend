@@ -802,10 +802,10 @@ async def delete_song(
                 detail=f"There is no song in this room playlist with index {queue_num}.",
             )
         for i in range(len(playlist)):
-            if i == queue_num:
+            if i + 1 == queue_num:
                 song = playlist[i]
                 continue
-            if i > queue_num:
+            if i + 1 > queue_num:
                 setattr(playlist[i], "queue_num", playlist[i].queue_num - 1)
         db.delete(song)
         db.commit()
