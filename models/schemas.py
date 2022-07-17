@@ -31,6 +31,7 @@ class Song(BaseModel):
     id: int
     link: str
     queue_num: int
+    title: str
     avatar: Optional[str]
     status: models.models.SongState
     user: User

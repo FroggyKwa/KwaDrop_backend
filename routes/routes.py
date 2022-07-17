@@ -471,6 +471,7 @@ async def add_song(
                 song = models.Song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
+                    title=yt.title,
                     avatar=avatar,
                     room=room,
                     queue_num=1,
@@ -491,6 +492,7 @@ async def add_song(
                 song = models.Song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
+                    title=yt.title,
                     room=room,
                     avatar=avatar,
                     queue_num=queue_num + 1,
