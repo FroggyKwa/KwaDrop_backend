@@ -15,4 +15,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 
 COPY . "/usr/src/${NAME}_backend"
-CMD alembic revision --autogenerate -m "init" ; alembic upgrade head ; gunicorn -w 1 -b 0.0.0.0:${PORT} -k uvicorn.workers.UvicornWorker main:app ssl_keyfile "/etc/letsencrypt/live/kwa-drop.ru/key.pem" ssl_certfile "/etc/letsencrypt/live/kwa-drop.ru/chain.pem"
+CMD alembic revision --autogenerate -m "init" ; alembic upgrade head ; gunicorn -w 1 -b 0.0.0.0:${PORT} -k uvicorn.workers.UvicornWorker main:app ssl_keyfile "/etc/letsencrypt/live/kwa-drop.ru/key.pem" ssl_certfile "/etc/letsencrypt/live/kwa-drop.ru/chain.pem" ; celery worker --app=worker.celery --loglevel=info

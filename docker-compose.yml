@@ -32,7 +32,6 @@ services:
 
   worker:
     build: ./
-    command: celery worker --app=worker.celery --loglevel=info
     volumes:
       - ./project:/usr/src/app
     environment:
