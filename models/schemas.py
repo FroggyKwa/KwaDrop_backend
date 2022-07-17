@@ -56,6 +56,7 @@ class UserList(BaseModel):
 
 class RoomAssociation(BaseModel):
     user: User
+    room: Room
     usertype: models.models.UserType
 
     class Config:
@@ -63,3 +64,4 @@ class RoomAssociation(BaseModel):
 
 
 UserList.update_forward_refs()
+User.update_forward_refs()

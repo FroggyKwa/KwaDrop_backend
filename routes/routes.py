@@ -361,7 +361,7 @@ async def delete_room(
     return room
 
 
-@router.post("/connect", dependencies=[Depends(cookie)], tags=["Room"])
+@router.post("/connect", dependencies=[Depends(cookie)], tags=["Room"], response_model=schemas.Room)
 async def connect(
     room_id: int = Query(..., description="""Room id."""),
     password: Optional[str] = Query(None, description="""Room password"""),
