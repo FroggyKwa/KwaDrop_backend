@@ -12,6 +12,7 @@ dnspython==2.2.1
 email-validator==1.2.1
 fastapi==0.78.0
 fastapi-sessions==0.3.2
+flower==0.9.7
 greenlet==1.1.2
 gunicorn==20.1.0
 h11==0.13.0

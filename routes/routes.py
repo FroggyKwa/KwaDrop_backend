@@ -5,6 +5,7 @@ import os
 from typing import Optional
 
 import pytube.exceptions
+from helpers import save_file
 import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile
 from fastapi.params import Query, File
@@ -27,22 +28,7 @@ from pytube import YouTube
 router = APIRouter()
 
 
-async def save_file(file: UploadFile, out_path: str, max_size=15):
-    if file.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Загружать можно только картинки")
 
-    size = 1024
-    async with aiofiles.open(out_path, "wb") as out_file:
-        content = await file.read(1024 * 1024)
-        while content:
-            await out_file.write(content)
-            content = await file.read(1024 * 1024)
-            size += 1024
-
-            if max_size:
-                if size / 1024 > max_size:
-                    os.unlink(out_path)
-                    raise HTTPException(status_code=400, detail="File exceeds max size")
 
 
 @router.post(

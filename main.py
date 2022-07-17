@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from celery.result import AsyncResult
+from fastapi import FastAPI, HTTPException
 from fastapi.params import Body
+from starlette import status
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.responses import JSONResponse
@@ -42,7 +44,20 @@ async def home():
 
 @app.post("/tasks", status_code=201)
 def run_task(payload=Body(...)):
+    task_types = [0]
     task_type = payload["type"]
+    if task_type not in task_types:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Application do not support tasks with type{task_type}.")
     task = create_task.delay(int(task_type))
     return JSONResponse({"task_id": task.id})
 
+
+@app.get("/tasks/{task_id}")
+def get_status(task_id):
+    task_result = AsyncResult(task_id)
+    result = {
+        "task_id": task_id,
+        "task_status": task_result.status,
+        "task_result": task_result.result
+    }
+    return JSONResponse(result)

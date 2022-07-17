@@ -44,6 +44,19 @@ services:
   redis:
     image: redis:6-alpine
 
+  dashboard:
+    build: ./
+    command: flower --app=worker.celery --port=5555 --broker=redis://redis:6379/0
+    ports:
+      - 5556:5555
+    environment:
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL}"
+      CELERY_RESULT_BACKEND: "${CELERY_BROKER_URL}"
+    depends_on:
+      - backend
+      - redis
+      - worker
+
 volumes:
   db-data:
   static:
