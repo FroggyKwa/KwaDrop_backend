@@ -730,15 +730,15 @@ async def swap_songs(
                 detail=f"There is no song in this room playlist with index {l} or with index {h}.",
             )
         if l == h:
-            return schemas.Success
+            return schemas.Success()
         if not current_index or current_index < l or current_index > h:
             for i in playlist:
                 if i.queue_num == l:
                     setattr(i, "queue_num", h)
-                if i.queue_num == h:
+                elif i.queue_num == h:
                     setattr(i, "queue_num", l)
             db.commit()
-            return schemas.Success
+            return schemas.Success()
         if current_index == l:
             for i in range(l + 1, h):
                 setattr(playlist[i], "status", models.SongState.played)
@@ -753,7 +753,7 @@ async def swap_songs(
         setattr(playlist[h], "queue_num", l)
         setattr(playlist[l], "queue_num", h)
         db.commit()
-        return schemas.Success
+        return schemas.Success()
 
     except NoResultFound:
         raise HTTPException(
