@@ -19,7 +19,6 @@ from pytube import YouTube
 router = APIRouter()
 
 
-
 @router.post(
     "/add_song",
     dependencies=[Depends(cookie)],
@@ -27,7 +26,9 @@ router = APIRouter()
     tags=["Songs"],
 )
 async def add_song(
-    link: str = Query(..., description="""YouTube link to the music video or phrase to search"""),
+    link: str = Query(
+        ..., description="""YouTube link to the music video or phrase to search"""
+    ),
     queue_num: Optional[int] = Query(
         None,
         description="""Index of song in playlist after which this **Song** should be put in.""",
@@ -48,7 +49,7 @@ async def add_song(
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
 
         yt = YouTube(link)
-        avatar = f'https://img.youtube.com/vi/{yt.video_id}/hqdefault.jpg'
+        avatar = f"https://img.youtube.com/vi/{yt.video_id}/hqdefault.jpg"
 
         playlist: list[models.Song] = get_room_playlist(room, db)
         if queue_num is None:
@@ -92,9 +93,18 @@ async def add_song(
         if res:
             if len(res) > 5:
                 res = res[:5]
-            res = [{'link':'https://www.youtube.com/watch?v=' + i.video_id, 'title':i.title, 'img':f'https://img.youtube.com/vi/{i.video_id}/hqdefault.jpg'} for i in res]
+            res = [
+                {
+                    "link": "https://www.youtube.com/watch?v=" + i.video_id,
+                    "title": i.title,
+                    "img": f"https://img.youtube.com/vi/{i.video_id}/hqdefault.jpg",
+                }
+                for i in res
+            ]
 
-        return Response(status_code=449, content=json.dumps(res), media_type='application/json')  # Retry with
+        return Response(
+            status_code=449, content=json.dumps(res), media_type="application/json"
+        )  # Retry with
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

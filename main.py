@@ -49,7 +49,10 @@ def run_task(payload=Body(...)):
     task_types = [0]
     task_type = payload["type"]
     if task_type not in task_types:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Application do not support tasks with type{task_type}.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Application do not support tasks with type{task_type}.",
+        )
     task = create_task.delay(int(task_type))
     return JSONResponse({"task_id": task.id})
 
@@ -60,6 +63,6 @@ def get_status(task_id):
     result = {
         "task_id": task_id,
         "task_status": task_result.status,
-        "task_result": task_result.result
+        "task_result": task_result.result,
     }
     return JSONResponse(result)

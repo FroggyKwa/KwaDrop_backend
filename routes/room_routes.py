@@ -1,4 +1,3 @@
-
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,10 +15,6 @@ from models import models, schemas
 
 
 router = APIRouter()
-
-
-
-
 
 
 @router.post(
@@ -194,7 +189,12 @@ async def delete_room(
     return room
 
 
-@router.post("/connect", dependencies=[Depends(cookie)], tags=["Room"], response_model=schemas.Room)
+@router.post(
+    "/connect",
+    dependencies=[Depends(cookie)],
+    tags=["Room"],
+    response_model=schemas.Room,
+)
 async def connect(
     room_id: int = Query(..., description="""Room id."""),
     password: Optional[str] = Query(None, description="""Room password"""),

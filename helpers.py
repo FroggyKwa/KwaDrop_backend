@@ -27,16 +27,26 @@ async def save_file(file: UploadFile, out_path: str, max_size=15):
 
 
 def get_image_links():
-    links = [f for f in os.listdir(os.getcwd() + '/images') if f.split('.')[-1] == 'jpg']
+    links = [
+        f for f in os.listdir(os.getcwd() + "/images") if f.split(".")[-1] == "jpg"
+    ]
     return links
 
 
 def delete_images_not_in_db():
     db = SessionLocal()
-    db_links = [i.avatar.split('images/')[1] for i in db.query(models.models.User).all() if i.avatar is not None]
+    db_links = [
+        i.avatar.split("images/")[1]
+        for i in db.query(models.models.User).all()
+        if i.avatar is not None
+    ]
     links = get_image_links()
     for i in links:
         if i not in db_links:
-            if datetime.datetime.now().timestamp() - os.path.getmtime(os.getcwd() + '/images/' + i) > 1800:
-                os.remove(os.getcwd() + '/images/' + i)
+            if (
+                datetime.datetime.now().timestamp()
+                - os.path.getmtime(os.getcwd() + "/images/" + i)
+                > 1800
+            ):
+                os.remove(os.getcwd() + "/images/" + i)
     return
