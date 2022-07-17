@@ -505,7 +505,7 @@ async def add_song(
         if res:
             if len(res) > 5:
                 res = res[:5]
-            res = ['https://www.youtube.com/watch?v=' + i.video_id for i in res]
+            res = [{'link':'https://www.youtube.com/watch?v=' + i.video_id, 'title':i.title, 'img':f'https://img.youtube.com/vi/{i.video_id}/hqdefault.jpg'} for i in res]
 
         return Response(status_code=449, content=json.dumps(res), media_type='application/json')  # Retry with
     except NoResultFound:
