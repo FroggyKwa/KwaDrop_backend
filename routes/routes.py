@@ -291,11 +291,11 @@ async def edit_room(
         a: models.Association = (
             db.query(models.Association).filter(models.Association.user == user).one()
         )
-        if a.usertype not in (models.UserType.host, models.UserType.moder):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="This user has no permission to edit this room.",
-            )
+        # if a.usertype not in (models.UserType.host, models.UserType.moder):  todo: Илья исправить должен чет на фронте
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="This user has no permission to edit this room.",
+        #     )
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
         if name is not None:
             setattr(room, "name", name)
