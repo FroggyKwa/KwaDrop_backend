@@ -1,8 +1,10 @@
+import json
 import secrets
 import aiofiles
 import os
 from typing import Optional
 
+import pytube.exceptions
 from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile
 from fastapi.params import Query, File
 from fastapi.responses import HTMLResponse, FileResponse
@@ -439,7 +441,7 @@ async def disconnect(
     tags=["Songs"],
 )
 async def add_song(
-    link: str = Query(..., description="YouTube link to the music video"),
+    link: str = Query(..., description="""YouTube link to the music video or phrase to search"""),
     queue_num: Optional[int] = Query(
         None,
         description="""Index of song in playlist after which this **Song** should be put in.""",
@@ -448,9 +450,9 @@ async def add_song(
     db: Session = Depends(get_db),
 ):
     """
-    Adds a **Song** to the **Room** playlist.
+    Adds a **Song** to the **Room** playlist or searches for this song in the YT.
 
-    Returns a **Song** object.
+    Returns a **Song** object if link given. If search phrase is given, returns list of links instead.
 
         Note that this method does not play a song. To play a song use /playnext, /playprev or /playthis instead.
     """
@@ -459,11 +461,11 @@ async def add_song(
         a = db.query(models.Association).filter(models.Association.user == user).one()
         room = db.query(models.Room).filter(models.Room.id == a.room_id).one()
 
+        yt = YouTube(link)
+
         playlist: list[models.Song] = get_room_playlist(room, db)
         if queue_num is None:
             if len(playlist) == 0:
-                yt = YouTube(link)
-
                 song = models.Song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
@@ -483,8 +485,6 @@ async def add_song(
 
         for i in range(len(playlist)):
             if playlist[i].queue_num == queue_num:
-                yt = YouTube(link)
-
                 song = models.Song(
                     user=user,
                     link=yt.streams.filter(only_audio=True)[0].url,
@@ -496,6 +496,14 @@ async def add_song(
             if playlist[i].queue_num > queue_num:
                 setattr(playlist[i], "queue_num", playlist[i].queue_num + 1)
         db.commit()
+    except pytube.exceptions.RegexMatchError:
+        res: list[pytube.YouTube] = pytube.Search(link).results.copy()
+        if res:
+            if len(res) > 5:
+                res = res[:5]
+            res = ['https://www.youtube.com/watch?v=' + i.video_id for i in res]
+
+        return Response(status_code=449, content=json.dumps(res), media_type='application/json')  # Retry with
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
